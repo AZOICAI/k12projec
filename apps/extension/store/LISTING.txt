@@ -1,0 +1,41 @@
+=== Chrome Web Store listing (copy/paste) ===
+
+Name: K12 Planner
+
+Short description (132 chars max):
+Add assignments to your K12 Planner account from any tab. See due-soon count on the extension badge.
+
+Detailed description:
+K12 Planner helps online high school students track courses, assignments, and study blocks in one place.
+
+This extension connects to your K12 Planner account at https://k12projec.vercel.app so you can:
+• Quickly add assignments from the toolbar popup
+• Save selected text or Google Classroom assignments to your planner
+• See how many assignments are due soon on the badge (optional notifications)
+• Sign in once in extension Options and stay synced with the web app
+
+You need a free K12 Planner account. Sign up on the website, then open extension Options to connect.
+
+Category: Productivity
+
+Language: English
+
+Privacy policy URL:
+https://k12projec.vercel.app/privacy
+
+Homepage URL:
+https://k12projec.vercel.app
+
+Permission justifications (if asked):
+• storage — Saves your sign-in session and app URL settings locally
+• alarms — Refreshes the due-soon assignment badge periodically
+• host_permissions (k12projec.vercel.app) — Calls the K12 Planner API to create assignments
+• host_permissions (supabase.co) — Signs you in with the same Supabase account as the web app
+
+Single purpose: Quick assignment entry for K12 Planner users.
+
+Data usage: Account credentials and planner data are sent only to your configured K12 Planner backend (Supabase auth + app API). No browsing history is collected.
+
+=== Screenshots ===
+Upload at least 1 screenshot (1280x800 or 640x400) of the popup or options page.
+Take them after installing the extension from the release zip or dist folder.

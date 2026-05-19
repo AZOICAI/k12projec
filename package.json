@@ -1,0 +1,14 @@
+{
+  "name": "k12-planner",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "dev:web": "npm run dev -w web",
+    "dev:extension": "npm run dev -w extension",
+    "build": "npm run build -w web && npm run build -w extension",
+    "build:extension": "npm run build -w extension",
+    "package:extension:store": "npm run package:store -w extension",
+    "lint": "npm run lint -w web"
+  }
+}
