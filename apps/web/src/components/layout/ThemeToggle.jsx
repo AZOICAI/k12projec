@@ -5,31 +5,30 @@
  */
 
 import { useEffect, useState } from "react";
+import { applyTheme, persistTheme, readStoredTheme } from "@/lib/theme";
 import { Button } from "../ui/Button";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState("system");
 
   useEffect(() => {
-    const stored = localStorage.getItem("k12-theme");
-    if (stored === "dark" || stored === "light") {
-      setTheme(stored);
-      document.documentElement.classList.toggle("dark", stored === "dark");
+    const stored = readStoredTheme();
+    setTheme(stored);
+    applyTheme(stored);
+
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function onSystemChange() {
+      if (readStoredTheme() === "system") applyTheme("system");
     }
+    mq.addEventListener("change", onSystemChange);
+    return () => mq.removeEventListener("change", onSystemChange);
   }, []);
 
   function cycle() {
     const next = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
     setTheme(next);
-    if (next === "system") {
-      localStorage.removeItem("k12-theme");
-      document.documentElement.classList.remove("dark");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.classList.toggle("dark", prefersDark);
-    } else {
-      localStorage.setItem("k12-theme", next);
-      document.documentElement.classList.toggle("dark", next === "dark");
-    }
+    persistTheme(next);
+    applyTheme(next);
   }
 
   const label = theme === "system" ? "Theme: Auto" : theme === "dark" ? "Theme: Dark" : "Theme: Light";
