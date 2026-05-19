@@ -53,5 +53,6 @@ export const preferencesUpdateSchema = z.object({
   timezone: z.string().min(1).max(100).optional(),
   web_notifications_enabled: z.boolean().optional(),
   extension_notifications_enabled: z.boolean().optional(),
+  email_reminders_enabled: z.boolean().optional(),
   remind_before_hours: z.array(z.number().int().min(0).max(168)).optional(),
 });

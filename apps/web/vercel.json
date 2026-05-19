@@ -1,5 +1,11 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && npm install && npm install @tailwindcss/oxide-linux-x64-gnu@4.3.0 lightningcss-linux-x64-gnu@1.32.0 -w web --no-save",
-  "buildCommand": "cd ../.. && npm run build -w web"
+  "buildCommand": "cd ../.. && npm run build -w web",
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 * * * *"
+    }
+  ]
 }

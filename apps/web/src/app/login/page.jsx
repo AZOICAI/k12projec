@@ -102,6 +102,10 @@ export default function LoginPage() {
         </Link>
       </p>
       <p className="text-center text-xs text-zinc-500">
+        <Link className="hover:underline" href="/help">
+          How to use
+        </Link>
+        {" · "}
         <Link className="hover:underline" href="/privacy">
           Privacy policy
         </Link>

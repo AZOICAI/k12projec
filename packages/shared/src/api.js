@@ -16,6 +16,11 @@ export const apiPaths = {
   account: `${API_V1_PREFIX}/account`,
   publicConfig: `${API_V1_PREFIX}/config/public`,
   validateSignup: `${API_V1_PREFIX}/auth/validate-signup`,
+  canvasStatus: `${API_V1_PREFIX}/canvas/status`,
+  canvasConnect: `${API_V1_PREFIX}/canvas/connect`,
+  canvasSync: `${API_V1_PREFIX}/canvas/sync`,
+  canvasDisconnect: `${API_V1_PREFIX}/canvas/disconnect`,
+  canvasPersonalToken: `${API_V1_PREFIX}/canvas/personal-token`,
 };
 
 /** Build full URL for extension (pass origin like https://app.example.com) */

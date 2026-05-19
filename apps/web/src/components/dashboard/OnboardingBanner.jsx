@@ -2,10 +2,8 @@
 
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
-/**
- * Purpose: First-run checklist when the planner is empty.
- */
-export function OnboardingBanner({ courseCount, assignmentCount }) {
+
+export function OnboardingBanner({ courseCount, assignmentCount, canvasAvailable }) {
   if (courseCount > 0 && assignmentCount > 0) return null;
 
   const steps = [
@@ -19,12 +17,20 @@ export function OnboardingBanner({ courseCount, assignmentCount }) {
       done: assignmentCount > 0,
       title: "Add your first assignment",
       href: "/app/assignments",
-      detail: "Or press / on the dashboard for quick add.",
+      detail: "Press / on the dashboard for quick add.",
     },
     {
       done: false,
-      title: "Install the Chrome extension (optional)",
-      href: null,
+      title: canvasAvailable ? "Import from Canvas" : "Canvas import (when school enables it)",
+      href: canvasAvailable ? "/app/settings" : "/help",
+      detail: canvasAvailable
+        ? "Settings → Connect Canvas → Import now."
+        : "Until then, add work manually or use the Classroom extension.",
+    },
+    {
+      done: false,
+      title: "Chrome extension (optional)",
+      href: "/help",
       detail: "Save assignments from Google Classroom while you browse.",
     },
   ];
@@ -33,7 +39,10 @@ export function OnboardingBanner({ courseCount, assignmentCount }) {
     <Card className="border-blue-200 bg-blue-50/80 dark:border-blue-900 dark:bg-blue-950/40">
       <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Welcome — get started</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        K12 Planner is in a school beta. Add a course, then track deadlines here and on the calendar.
+        School beta: add courses, then deadlines.{" "}
+        <Link href="/help" className="text-blue-600 hover:underline">
+          Full guide
+        </Link>
       </p>
       <ol className="mt-4 space-y-3">
         {steps.map((step) => (
@@ -68,10 +77,10 @@ export function OnboardingBanner({ courseCount, assignmentCount }) {
           Add a course
         </Link>
         <Link
-          href="/app/assignments"
+          href="/help"
           className="inline-flex rounded-[var(--radius-button)] border border-zinc-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
         >
-          Add assignment
+          How to use
         </Link>
       </div>
     </Card>

@@ -4,6 +4,7 @@ import { DashboardClient } from "@/components/dashboard/DashboardClient";
 import { OnboardingBanner } from "@/components/dashboard/OnboardingBanner";
 import { QuickAddDrawer } from "@/components/dashboard/QuickAddDrawer";
 import { NotificationRunner } from "@/components/dashboard/NotificationRunner";
+import { isCanvasSyncAvailable } from "@/lib/canvas/config";
 
 export default async function DashboardPage() {
   let summary = null;
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
           <OnboardingBanner
             courseCount={summary.course_count ?? 0}
             assignmentCount={summary.total_assignment_count ?? 0}
+            canvasAvailable={isCanvasSyncAvailable()}
           />
           <DashboardClient initialSummary={summary} />
           <NotificationRunner />

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { computeDashboardSummary } from "@/lib/dashboard/summary";
+import { computeWorkNow } from "@/lib/dashboard/workNow";
 import { jsonError } from "@/lib/api/http";
 import { requireUser } from "@/lib/supabase/api";
 import { getWeekBounds } from "@k12/shared";
@@ -29,9 +30,11 @@ export async function GET(request) {
   if (studyRes.error) return jsonError(studyRes.error.message, 500);
   if (coursesRes.error) return jsonError(coursesRes.error.message, 500);
 
+  const assignments = assignmentsRes.data ?? [];
   const summary = {
-    ...computeDashboardSummary(assignmentsRes.data ?? [], studyRes.data ?? []),
+    ...computeDashboardSummary(assignments, studyRes.data ?? []),
     course_count: coursesRes.count ?? 0,
+    work_now: computeWorkNow(assignments),
   };
 
   return NextResponse.json(summary);

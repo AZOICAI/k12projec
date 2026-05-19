@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiPaths } from "@k12/shared";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { CanvasPanel } from "@/components/settings/CanvasPanel";
 
 export default function SettingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [timezone, setTimezone] = useState("America/New_York");
   const [webNotif, setWebNotif] = useState(false);
   const [extNotif, setExtNotif] = useState(false);
+  const [emailReminders, setEmailReminders] = useState(false);
   const [remind24, setRemind24] = useState(true);
   const [remind2, setRemind2] = useState(true);
   const [message, setMessage] = useState(null);
@@ -20,26 +23,30 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [publicConfig, setPublicConfig] = useState(null);
+  const [canvasStatus, setCanvasStatus] = useState(null);
 
   useEffect(() => {
     void (async () => {
-      const [prefRes, cfgRes] = await Promise.all([
+      const [prefRes, cfgRes, canvasRes] = await Promise.all([
         fetch(apiPaths.preferences, { credentials: "include" }),
         fetch(apiPaths.publicConfig),
+        fetch(apiPaths.canvasStatus, { credentials: "include" }),
       ]);
       if (prefRes.ok) {
         const p = await prefRes.json();
         setTimezone(p.timezone ?? "America/New_York");
         setWebNotif(p.web_notifications_enabled ?? false);
         setExtNotif(p.extension_notifications_enabled ?? false);
+        setEmailReminders(p.email_reminders_enabled ?? false);
         const hours = p.remind_before_hours ?? [24, 2];
         setRemind24(hours.includes(24));
         setRemind2(hours.includes(2));
       }
       if (cfgRes.ok) setPublicConfig(await cfgRes.json());
+      if (canvasRes.ok) setCanvasStatus(await canvasRes.json());
       setLoading(false);
     })();
-  }, []);
+  }, [searchParams]);
 
   async function requestBrowserPermission() {
     if (!("Notification" in window)) {
@@ -65,6 +72,7 @@ export default function SettingsPage() {
         timezone,
         web_notifications_enabled: webNotif,
         extension_notifications_enabled: extNotif,
+        email_reminders_enabled: emailReminders,
         remind_before_hours,
       }),
     });
@@ -84,7 +92,7 @@ export default function SettingsPage() {
 
   async function deleteAccount() {
     if (deleteConfirm !== "DELETE") {
-      setMessage('Type DELETE in the box below to confirm account removal.');
+      setMessage("Type DELETE in the box below to confirm account removal.");
       return;
     }
     setDeleting(true);
@@ -109,7 +117,10 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Reminders, integrations, and your data.
+          Reminders, Canvas import, and your data.{" "}
+          <Link href="/help" className="text-blue-600 hover:underline">
+            Help
+          </Link>
         </p>
       </div>
 
@@ -127,12 +138,21 @@ export default function SettingsPage() {
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={webNotif} onChange={(e) => setWebNotif(e.target.checked)} />
-          Enable browser reminders (while planner tab is open)
+          Browser reminders while the planner tab is open
         </label>
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={extNotif} onChange={(e) => setExtNotif(e.target.checked)} />
-          Enable Chrome extension due-soon notifications
+          Chrome extension due-soon notifications
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={emailReminders}
+            onChange={(e) => setEmailReminders(e.target.checked)}
+          />
+          Email reminders (hourly check; requires server setup)
         </label>
 
         <fieldset className="text-sm">
@@ -159,11 +179,7 @@ export default function SettingsPage() {
 
       <Card className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Canvas LMS</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {publicConfig?.canvasSyncAvailable
-            ? "Connect Canvas in this panel to import assignments."
-            : "Automatic Canvas sync is coming soon. For now, add assignments manually, use Quick Add (/), or save from Google Classroom with the Chrome extension."}
-        </p>
+        <CanvasPanel publicConfig={publicConfig} initialStatus={canvasStatus} />
       </Card>
 
       <Card className="flex flex-col gap-2">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { StatCard } from "./StatCard";
 import { WeeklyProgress } from "./WeeklyProgress";
 import { UpcomingDeadlines } from "./UpcomingDeadlines";
+import { WorkNowCard } from "./WorkNowCard";
 
 export function DashboardClient({ initialSummary }) {
   const router = useRouter();
@@ -22,6 +23,7 @@ export function DashboardClient({ initialSummary }) {
 
   return (
     <div className="flex flex-col gap-8">
+      <WorkNowCard items={s.work_now} onMarkDone={markDone} />
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Overdue" value={s.overdue_count} accent="danger" />
         <StatCard label="Due today" value={s.due_today_count} accent="warn" />

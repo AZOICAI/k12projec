@@ -18,6 +18,7 @@ const navItems = [
   { href: "/app/calendar", label: "Calendar" },
   { href: "/app/study", label: "Study" },
   { href: "/app/settings", label: "Settings" },
+  { href: "/help", label: "Help" },
 ];
 
 function NavLinks({ onNavigate, className }) {

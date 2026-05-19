@@ -14,7 +14,7 @@ Built with **JavaScript** (Next.js, React, Vite).
 | `apps/extension` | Manifest V3 Chrome extension (popup quick-add, options sign-in) |
 | `packages/shared` | Zod schemas, API paths, shared types |
 | `supabase/migrations` | Postgres schema + Row Level Security |
-| `docs/` | Architecture, learning guide, roadmap |
+| `docs/` | Architecture, [`BETA_SETUP.md`](docs/BETA_SETUP.md), [`CANVAS_SETUP.md`](docs/CANVAS_SETUP.md), roadmap |
 
 ## Use the app (students & teachers)
 
@@ -53,7 +53,16 @@ No install on your computer is required for the website — only the browser.
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `NEXT_PUBLIC_APP_URL` = `https://k12projec.vercel.app` (no trailing slash)
-3. Deploy. The site URL above is what students should bookmark.
+3. Deploy from the **repo root** (not `apps/web` alone):
+
+   ```bash
+   npm run deploy          # production → https://k12projec.vercel.app
+   npm run deploy:preview  # preview URL
+   ```
+
+   First time: `npx vercel login` then `npx vercel link` (choose project **k12projec**).
+
+   The site URL above is what students should bookmark.
 
 Optional server-only vars: `SUPABASE_SERVICE_ROLE_KEY` (account deletion in Settings), `ALLOWED_SIGNUP_EMAIL_DOMAINS`, `SIGNUP_INVITE_CODE`.
 

@@ -11,3 +11,6 @@ dist
 *.log
 
 .vercel
+
+apps/extension/release/
+**/New Text Document*.txt

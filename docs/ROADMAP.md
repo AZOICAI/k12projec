@@ -1,27 +1,31 @@
-# Product roadmap (future)
+# Product roadmap
 
-Tracked ideas — implement incrementally. See `// TODO(future):` in code.
+## Shipped (school beta growth plan)
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| AI study schedule | Planned | Edge function + LLM; input assignments + study blocks |
-| “What should I work on now?” | Planned | Rank by due date, estimate, status |
-| Google Calendar sync | Planned | OAuth + two-way or export |
-| Canvas / Schoology parsers | Planned | Like Classroom content script in extension |
-| Productivity analytics | Planned | Charts from `/api/v1/dashboard/summary` history |
-| Smart push (tab closed) | Planned | Supabase Edge Function or Vercel Cron |
-| Gamification / streaks | Planned | `user_stats` table |
-| Study groups | Planned | Shared RLS policies |
-| FastAPI backend | Learning | See `docs/future-fastapi.md` |
+- Beta signup controls (email domain, invite code) + privacy / account deletion
+- Student help page (`/help`) + onboarding checklist
+- **Canvas:** OAuth connect, import courses/assignments, dedupe by Canvas ID ([`docs/CANVAS_SETUP.md`](CANVAS_SETUP.md))
+- **Work on now** dashboard card (overdue → today → soon)
+- **Email reminders** v2 (Vercel Cron + optional Resend)
+- Maintainer docs: [`BETA_SETUP.md`](BETA_SETUP.md)
 
-## Shipped in growth roadmap
+## Shipped earlier
 
-- Design system components + mobile app shell
-- Dashboard stats, progress bar, upcoming deadlines
+- Design system + mobile app shell
+- Dashboard stats, progress, upcoming deadlines
 - User preferences + browser/extension reminders (v1)
-- Quick-add drawer (`/` shortcut)
-- Unified calendar (assignments + study + class meetings)
-- Assignment inline edit
-- Terms / semesters UI
-- Extension: token refresh, notifications, context menu save, Classroom button
-- `source_url` on assignments
+- Quick-add (`/`), unified calendar, assignment inline edit
+- Terms UI, Classroom extension + `source_url`
+
+## Phase 4 — after beta metrics (do not start yet)
+
+| Feature | Notes |
+|---------|--------|
+| Gamification / streaks | `user_stats`; careful tone for schools |
+| Google Calendar sync | OAuth heavy; `.ics` export first |
+| Productivity analytics | Needs historical snapshots |
+| AI study schedule | Cost + trust |
+| Study groups | Shared RLS |
+| Canvas extension content script | Optional; API import covers beta |
+| Schoology parser | Like Classroom |
+| FastAPI backend | Learning — [`future-fastapi.md`](future-fastapi.md) |

@@ -93,6 +93,16 @@ export function AssignmentRow({ assignment, courses, onUpdated, onDelete }) {
         {notePreview ? (
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{notePreview}</p>
         ) : null}
+        {assignment.source_url ? (
+          <a
+            href={assignment.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-0.5 inline-block text-xs text-blue-600 hover:underline"
+          >
+            Open in LMS
+          </a>
+        ) : null}
       </td>
       <td className="px-4 py-3">
         <span className="inline-flex items-center gap-2">

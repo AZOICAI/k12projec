@@ -9,6 +9,8 @@
     "build": "npm run build -w web && npm run build -w extension",
     "build:extension": "npm run build -w extension",
     "package:extension:store": "npm run package:store -w extension",
-    "lint": "npm run lint -w web"
+    "lint": "npm run lint -w web",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:preview": "node scripts/deploy.mjs --preview"
   }
 }
