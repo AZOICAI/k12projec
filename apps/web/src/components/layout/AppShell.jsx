@@ -8,17 +8,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { FocusTimerKeeper } from "@/components/study/FocusTimerKeeper";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "../ui/Button";
 
 const navItems = [
-  { href: "/app", label: "Home" },
+  { href: "/app", label: "Today" },
   { href: "/app/courses", label: "Courses" },
-  { href: "/app/assignments", label: "Assignments" },
-  { href: "/app/calendar", label: "Calendar" },
-  { href: "/app/study", label: "Study" },
+  { href: "/app/schedule", label: "Schedule" },
+  { href: "/app/study", label: "Focus" },
   { href: "/app/settings", label: "Settings" },
-  { href: "/help", label: "Help" },
 ];
 
 function NavLinks({ onNavigate, className }) {
@@ -26,7 +25,10 @@ function NavLinks({ onNavigate, className }) {
   return (
     <nav className={className}>
       {navItems.map(({ href, label }) => {
-        const active = pathname === href || (href !== "/app" && pathname.startsWith(href));
+        const active =
+          pathname === href ||
+          (href === "/app/schedule" && pathname === "/app/calendar") ||
+          (href !== "/app" && pathname.startsWith(href));
         return (
           <Link
             key={href}
@@ -51,6 +53,7 @@ export function AppShell({ userEmail, signOutAction, children }) {
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
+      <FocusTimerKeeper />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">

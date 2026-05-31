@@ -1,5 +1,6 @@
 import { assignmentUpdateSchema } from "@k12/shared";
 import { NextRequest, NextResponse } from "next/server";
+import { updatePayloadWithFlags } from "@/lib/assignments/assignmentFlags";
 import { jsonError } from "@/lib/api/http";
 import { requireUser } from "@/lib/supabase/api";
 
@@ -16,7 +17,7 @@ export async function PATCH(request, context) {
 
   const { data, error } = await supabase
     .from("assignments")
-    .update(parsed.data)
+    .update(updatePayloadWithFlags(parsed.data))
     .eq("id", id)
     .eq("user_id", user.id)
     .select("*")

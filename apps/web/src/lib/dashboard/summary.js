@@ -1,60 +1,61 @@
 /**
- * Purpose: Compute dashboard stats from assignments and study blocks.
- * Used by: GET /api/v1/dashboard/summary
+ * Purpose: Compute dashboard stats for the Today tab.
  */
 
-import { getWeekBounds, isDueToday, isDueSoon, isOverdue, sumStudyHours } from "@k12/shared";
+import { getWeekBounds, isAssignmentOverdue, isDueToday } from "@k12/shared";
+import { isArchivedAssignment } from "@/lib/assignments/stale";
+import { bucketActiveAssignments } from "./assignmentBuckets";
+import { computeNeedsRedoAssignments, mapAssignmentForDashboard } from "./assignmentLists";
 
-export function computeDashboardSummary(assignments, studyBlocks, now = new Date()) {
+export function computeDashboardSummary(assignments, courses = [], studyMinutesWeek = 0, now = new Date()) {
   const { from, to } = getWeekBounds(now);
-  const weekStart = new Date(from).getTime();
-  const weekEnd = new Date(to).getTime();
+  const weekStartMs = new Date(from).getTime();
+  const weekEndMs = new Date(to).getTime();
+  const ts = now.getTime();
+
+  const buckets = bucketActiveAssignments(assignments, now);
+  const needsRedo = computeNeedsRedoAssignments(assignments, courses, now);
 
   const weekAssignments = assignments.filter((a) => {
+    if (isArchivedAssignment(a, ts)) return false;
     const t = new Date(a.due_at).getTime();
-    return t >= weekStart && t <= weekEnd;
+    if (Number.isNaN(t)) return false;
+    return t >= weekStartMs && t <= weekEndMs;
   });
 
-  const active = assignments.filter((a) => a.status !== "done");
-  const overdue = active.filter((a) => isOverdue(a.due_at, now.getTime()));
-  const dueToday = active.filter((a) => isDueToday(a.due_at, now));
-  const dueSoon = active.filter(
-    (a) => !isDueToday(a.due_at, now) && isDueSoon(a.due_at, now.getTime()),
-  );
+  const weekActive = weekAssignments.filter((a) => a.status !== "done");
   const doneThisWeek = weekAssignments.filter((a) => a.status === "done");
 
   const weekTotal = weekAssignments.length;
   const weekDone = doneThisWeek.length;
   const progressPercent = weekTotal ? Math.round((weekDone / weekTotal) * 100) : 0;
 
-  const upcoming = [...active]
-    .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())
-    .slice(0, 5)
-    .map((a) => ({
-      id: a.id,
-      title: a.title,
-      due_at: a.due_at,
-      status: a.status,
-      course_id: a.course_id,
-      courses: a.courses,
-    }));
-
-  const studyInWeek = studyBlocks.filter((b) => {
-    const t = new Date(b.starts_at).getTime();
-    return t >= weekStart && t <= weekEnd;
+  const weekList = [...weekActive].sort((a, b) => {
+    const rank = (x) => {
+      if (isAssignmentOverdue(x, ts) && x.status !== "done") return 0;
+      if (isDueToday(x.due_at, now) && x.status !== "done") return 1;
+      if (x.is_redo && x.status !== "done") return 2;
+      if (x.status === "done") return 4;
+      return 3;
+    };
+    const ra = rank(a);
+    const rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
   });
 
   return {
-    overdue_count: overdue.length,
-    due_today_count: dueToday.length,
-    due_soon_count: dueSoon.length,
+    overdue_count: buckets.overdue_count,
+    due_today_count: buckets.due_today_count,
+    soon_due_count: buckets.soon_due_count,
+    needs_redo_count: needsRedo.length,
+    study_minutes_week: studyMinutesWeek,
     done_this_week_count: weekDone.length,
     week_assignment_total: weekTotal,
     progress_percent: progressPercent,
-    study_hours_this_week: sumStudyHours(studyInWeek),
-    upcoming_deadlines: upcoming,
+    week_assignments: weekList.map(mapAssignmentForDashboard),
+    stat_buckets: buckets,
     week_from: from,
     week_to: to,
-    total_assignment_count: assignments.length,
   };
 }

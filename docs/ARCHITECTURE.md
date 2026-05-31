@@ -21,7 +21,7 @@ Browser / Extension
 
 1. User opens a page under `/app/*`.
 2. `middleware.js` calls `updateSession` — refreshes Supabase cookies, redirects guests to `/login`.
-3. Server components may call `serverApi()` which fetches your own API with cookies.
+3. Server components load data via Supabase server client (e.g. `loadDashboardSummary()`).
 4. API routes call `requireUser()` — reads session from cookies or `Authorization: Bearer` (extension).
 5. Supabase queries run with the user's JWT; **Row Level Security** ensures `user_id = auth.uid()`.
 

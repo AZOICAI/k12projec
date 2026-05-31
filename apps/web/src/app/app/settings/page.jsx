@@ -8,6 +8,8 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { CanvasPanel } from "@/components/settings/CanvasPanel";
+import { TermsPanel } from "@/components/courses/TermsPanel";
+import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -176,6 +178,10 @@ export default function SettingsPage() {
 
         {message ? <p className="text-sm text-zinc-600">{message}</p> : null}
       </Card>
+
+      <CollapsibleSection title="School terms" summary="Optional semesters" defaultOpen={false}>
+        <TermsPanel />
+      </CollapsibleSection>
 
       <Card className="flex flex-col gap-2">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Canvas LMS</h2>

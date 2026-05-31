@@ -10,6 +10,12 @@ Run in the SQL editor, in order:
 2. `supabase/migrations/20250519000000_user_preferences.sql`
 3. `supabase/migrations/20250520000000_canvas.sql`
 4. `supabase/migrations/20250521000000_canvas_personal_token.sql`
+5. `supabase/migrations/20250522000000_assistant_features.sql` (grades, starters, study notes)
+6. `supabase/migrations/20250531000000_assignment_recovery.sql` (redo flag — column `is_recovery`, shown as Redo in the app)
+7. `supabase/migrations/20250532000000_assignment_low_grade.sql` (optional manual low-grade flag)
+8. `supabase/migrations/20250533000000_assignment_grades.sql` (scores + redo link from Canvas)
+9. `supabase/migrations/20250534000000_course_gpa.sql` (credit hours + weighted GPA per class)
+10. `supabase/migrations/20250535000000_study_sessions.sql` (Focus timer logged study time)
 
 ## Vercel environment variables
 

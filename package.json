@@ -4,6 +4,7 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "npm run dev -w web",
+    "dev:clean": "node scripts/dev-clean.mjs",
     "dev:web": "npm run dev -w web",
     "dev:extension": "npm run dev -w extension",
     "build": "npm run build -w web && npm run build -w extension",

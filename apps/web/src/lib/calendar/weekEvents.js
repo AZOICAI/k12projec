@@ -1,70 +1,69 @@
 /**
- * Purpose: Build unified calendar events for a week (assignments, classes, study).
+ * Purpose: Build unified calendar events for a week (assignments, study blocks).
  */
 
-export function meetingsForDay(courseMeetings, dayDate) {
-  const weekday = dayDate.getDay();
-  return (courseMeetings ?? []).filter((m) => m.weekday === weekday);
-}
+import { isSameLocalDate, toLocalDateInputValue } from "@k12/shared";
 
-export function formatMinutes(m) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  const ap = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(min).padStart(2, "0")} ${ap}`;
-}
-
-export function buildWeekCalendarData(assignments, studyBlocks, courses, weekStart) {
+export function buildWeekCalendarData(assignments, studyBlocks, weekStart) {
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
     return d;
   });
 
-  const allMeetings = courses.flatMap((c) =>
-    (c.course_meetings ?? []).map((m) => ({ ...m, course: c })),
-  );
-
   return days.map((day) => {
-    const key = day.toDateString();
-    const dayAssignments = assignments.filter((a) => {
-      const due = new Date(a.due_at);
-      return due.toDateString() === key;
-    });
-    const dayStudy = studyBlocks.filter((b) => {
-      const start = new Date(b.starts_at);
-      return start.toDateString() === key;
-    });
-    const dayMeetings = meetingsForDay(allMeetings, day).map((m) => ({
-      type: "meeting",
-      id: m.id,
-      title: m.course?.name ?? "Class",
-      color: m.course?.color ?? "#3B82F6",
-      time: `${formatMinutes(m.start_minutes)} – ${formatMinutes(m.end_minutes)}`,
-    }));
+    const dayKey = toLocalDateInputValue(day);
+    const dayAssignments = assignments.filter((a) => isSameLocalDate(a.due_at, dayKey));
+    const dayStudy = studyBlocks.filter((b) => isSameLocalDate(b.starts_at, dayKey));
 
-    return {
-      day,
-      key,
-      assignments: dayAssignments.map((a) => ({
+    const assignmentEvents = dayAssignments
+      .sort((x, y) => new Date(x.due_at).getTime() - new Date(y.due_at).getTime())
+      .map((a) => ({
         type: "assignment",
         id: a.id,
         title: a.title,
         color: a.courses?.color ?? "#3B82F6",
+        sortAt: new Date(a.due_at).getTime(),
         time: new Date(a.due_at).toLocaleTimeString(undefined, {
           hour: "numeric",
           minute: "2-digit",
         }),
-      })),
-      study: dayStudy.map((b) => ({
+      }));
+
+    const study = dayStudy
+      .sort((x, y) => new Date(x.starts_at).getTime() - new Date(y.starts_at).getTime())
+      .map((b) => ({
         type: "study",
         id: b.id,
         title: b.title,
         color: "#8B5CF6",
+        sortAt: new Date(b.starts_at).getTime(),
         time: `${new Date(b.starts_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} – ${new Date(b.ends_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`,
-      })),
-      meetings: dayMeetings,
+      }));
+
+    return {
+      day,
+      key: day.toDateString(),
+      assignments: assignmentEvents,
+      study,
     };
+  });
+}
+
+/** Chronological agenda for the week (study → due). */
+export function buildWeekAgenda(weekDays) {
+  const items = [];
+  for (const { day, study, assignments } of weekDays) {
+    const dayLabel = day.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    for (const ev of study) {
+      items.push({ ...ev, dayLabel, dayKey: day.toDateString(), kind: "Study" });
+    }
+    for (const ev of assignments) {
+      items.push({ ...ev, dayLabel, dayKey: day.toDateString(), kind: "Due" });
+    }
+  }
+  return items.sort((a, b) => {
+    if (a.dayKey !== b.dayKey) return new Date(a.dayKey).getTime() - new Date(b.dayKey).getTime();
+    return (a.sortAt ?? 0) - (b.sortAt ?? 0);
   });
 }

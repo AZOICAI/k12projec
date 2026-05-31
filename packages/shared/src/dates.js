@@ -17,6 +17,29 @@ export function getWeekBounds(date = new Date()) {
   return { from: monday.toISOString(), to: sunday.toISOString() };
 }
 
+/** Parse YYYY-MM-DD as a local calendar date (avoids UTC midnight shifting the day). */
+export function parseLocalDateString(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** YYYY-MM-DD for a Date in the user's local timezone. */
+export function toLocalDateInputValue(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Whether an ISO timestamp falls on the given local YYYY-MM-DD day. */
+export function isSameLocalDate(isoOrDate, dateStr) {
+  const d = typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  if (Number.isNaN(d.getTime())) return false;
+  return toLocalDateInputValue(d) === dateStr;
+}
+
 /** Start/end of calendar day in local time. */
 export function getDayBounds(date = new Date()) {
   const start = new Date(date);
@@ -40,8 +63,16 @@ export function isDueSoon(dueAt, now = Date.now()) {
   return getDueLabel(dueAt, now) === "dueSoon";
 }
 
-export function isOverdue(dueAt, now = Date.now()) {
-  return getDueLabel(dueAt, now) === "overdue";
+/** Past due and still active — ignores ancient Canvas history (>90 days past due). */
+export function isAssignmentOverdue(assignment, now = Date.now()) {
+  if (!assignment?.due_at || assignment.status === "done") return false;
+  const due = new Date(assignment.due_at).getTime();
+  if (Number.isNaN(due)) return false;
+  const ms = now - due;
+  if (ms < 0) return false;
+  const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+  if (ms > ninetyDays) return false;
+  return true;
 }
 
 export function isDueToday(dueAt, now = new Date()) {
@@ -51,13 +82,4 @@ export function isDueToday(dueAt, now = new Date()) {
     due.getMonth() === now.getMonth() &&
     due.getDate() === now.getDate()
   );
-}
-
-/** Hours of study blocks overlapping [from, to]. */
-export function sumStudyHours(blocks) {
-  let ms = 0;
-  for (const b of blocks) {
-    ms += new Date(b.ends_at).getTime() - new Date(b.starts_at).getTime();
-  }
-  return Math.round((ms / (1000 * 60 * 60)) * 10) / 10;
 }

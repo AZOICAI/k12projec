@@ -47,6 +47,20 @@ export async function listCourseAssignments(domain, accessToken, courseId) {
   return canvasGetAll(
     domain,
     accessToken,
-    `/courses/${courseId}/assignments?per_page=50&order_by=due_at`,
+    `/courses/${courseId}/assignments?per_page=50&order_by=due_at&include[]=submission`,
   );
+}
+
+/** Current user's enrollment + grades for one course. */
+export async function getCourseEnrollmentGrade(domain, accessToken, courseId) {
+  const enrollments = await canvasGetAll(
+    domain,
+    accessToken,
+    `/courses/${courseId}/enrollments?user_id=self&per_page=10&include[]=total_scores`,
+  );
+  const row =
+    enrollments.find((e) => e.type === "StudentEnrollment") ??
+    enrollments.find((e) => String(e.user_id) === "self") ??
+    enrollments[0];
+  return row?.grades ?? null;
 }

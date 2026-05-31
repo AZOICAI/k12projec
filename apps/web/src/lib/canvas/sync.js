@@ -1,11 +1,13 @@
+import { getStaleDueCutoff } from "@/lib/assignments/stale";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { listActiveCourses, listCourseAssignments } from "./api";
+import {
+  averageAssignmentGradePercent,
+  parseEnrollmentGradePercent,
+} from "@/lib/canvas/courseGrades";
+import { getCourseEnrollmentGrade, listActiveCourses, listCourseAssignments } from "./api";
+import { extractCanvasGrades } from "@/lib/assignments/grades";
+import { ARCHIVE_PAST_DAYS, resolveCanvasStatus, shouldImportCanvasAssignment } from "./assignmentImport";
 import { getCanvasConnection, getValidAccessToken, touchLastSynced } from "./connection";
-
-function parseCanvasDueAt(assignment) {
-  if (assignment.due_at) return assignment.due_at;
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-}
 
 export async function syncCanvasForUser(userId) {
   const connection = await getCanvasConnection(userId);
@@ -61,17 +63,34 @@ export async function syncCanvasForUser(userId) {
 
     for (const ca of canvasAssignments) {
       if (!ca.id) continue;
+
       const canvasAssignmentId = String(ca.id);
-      const dueAt = parseCanvasDueAt(ca);
-      const title = ca.name || "Assignment";
-      const htmlUrl = ca.html_url ?? null;
 
       const { data: existing } = await admin
         .from("assignments")
-        .select("id")
+        .select("id, status")
         .eq("user_id", userId)
         .eq("canvas_assignment_id", canvasAssignmentId)
         .maybeSingle();
+
+      const status = resolveCanvasStatus(ca, existing?.status);
+
+      const inImportWindow = shouldImportCanvasAssignment(ca);
+
+      if (!inImportWindow && !existing?.id) continue;
+
+      if (!inImportWindow && existing?.id) {
+        const grades = extractCanvasGrades(ca);
+        await admin.from("assignments").update({ status, ...grades }).eq("id", existing.id);
+        continue;
+      }
+
+      const dueAt = ca.due_at;
+      if (!dueAt) continue;
+
+      const title = ca.name || "Assignment";
+      const htmlUrl = ca.html_url ?? null;
+      const grades = extractCanvasGrades(ca);
 
       if (existing?.id) {
         await admin
@@ -82,6 +101,8 @@ export async function syncCanvasForUser(userId) {
             course_id: localCourseId,
             canvas_course_id: canvasCourseId,
             source_url: htmlUrl,
+            status,
+            ...grades,
           })
           .eq("id", existing.id);
       } else {
@@ -90,15 +111,55 @@ export async function syncCanvasForUser(userId) {
           course_id: localCourseId,
           title,
           due_at: dueAt,
-          status: "todo",
+          status,
           canvas_assignment_id: canvasAssignmentId,
           canvas_course_id: canvasCourseId,
           source_url: htmlUrl,
+          ...grades,
         });
         if (error) throw new Error(error.message);
         assignmentCount += 1;
       }
     }
+
+    let courseGradePercent = null;
+    try {
+      const enrollmentGrades = await getCourseEnrollmentGrade(domain, accessToken, cc.id);
+      courseGradePercent = parseEnrollmentGradePercent(enrollmentGrades);
+    } catch {
+      /* enrollment grades are optional */
+    }
+
+    if (courseGradePercent == null) {
+      const { data: courseAssignments } = await admin
+        .from("assignments")
+        .select("grade_percent")
+        .eq("course_id", localCourseId)
+        .eq("user_id", userId);
+      courseGradePercent = averageAssignmentGradePercent(courseAssignments ?? []);
+    }
+
+    if (courseGradePercent != null) {
+      await admin
+        .from("courses")
+        .update({ current_grade_percent: courseGradePercent })
+        .eq("id", localCourseId);
+    }
+  }
+
+  const weekStart = getStaleDueCutoff();
+  const archiveCutoff = new Date(
+    Date.now() - ARCHIVE_PAST_DAYS * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  for (const cutoff of [weekStart, archiveCutoff]) {
+    await admin
+      .from("assignments")
+      .update({ status: "done" })
+      .eq("user_id", userId)
+      .not("canvas_assignment_id", "is", null)
+      .lt("due_at", cutoff)
+      .in("status", ["todo", "in_progress"]);
   }
 
   await touchLastSynced(userId);

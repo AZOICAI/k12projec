@@ -19,14 +19,14 @@ export default function HelpPage() {
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">2. Add courses</h2>
       <p className="mt-2">
-        Go to <strong>Courses</strong> and add each class. Pick a color so the calendar is easy to
-        read.
+        On <strong>Courses</strong>, add each class and set optional current / goal grades. For Canvas
+        schools, connect in <strong>Settings</strong> and run <strong>Import now</strong> to pull scores
+        and class percentages.
       </p>
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">3. Add assignments</h2>
       <ul className="mt-2 list-inside list-disc space-y-1">
-        <li>Type them under <strong>Assignments</strong></li>
-        <li>On the dashboard, press <kbd className="rounded border px-1">/</kbd> for quick add</li>
+        <li>On <strong>Today</strong>, use quick add (<kbd className="rounded border px-1">/</kbd>) or the add button</li>
         <li>
           <strong>Canvas:</strong> Settings → Connect Canvas → Import now (if your school enabled
           it)
@@ -44,7 +44,21 @@ export default function HelpPage() {
         sign in with the same account as the website.
       </p>
 
-      <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">5. Reminders</h2>
+      <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">5. Schedule & focus</h2>
+      <ul className="mt-2 list-inside list-disc space-y-1">
+        <li>
+          <strong>Today:</strong> stat blocks (overdue, due today, soon, study hours).{" "}
+          <strong>Courses:</strong> GPA, per-class work, schedule redo.
+        </li>
+        <li>
+          <strong>Schedule:</strong> week view and plan my day (title + time, add or delete blocks).
+        </li>
+        <li>
+          <strong>Focus:</strong> study timer and your next block — edit blocks on Schedule.
+        </li>
+      </ul>
+
+      <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">6. Reminders</h2>
       <p className="mt-2">
         In <strong>Settings</strong>, turn on browser or email reminders and choose 24h / 2h before
         due dates.

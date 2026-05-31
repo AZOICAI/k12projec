@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 
-export function QuickAddDrawer() {
+export function QuickAddDrawer({ defaultCourseId = null, pushUndo }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [courses, setCourses] = useState([]);
@@ -18,6 +18,7 @@ export function QuickAddDrawer() {
   const [courseId, setCourseId] = useState("");
   const [dueLocal, setDueLocal] = useState("");
   const [estimate, setEstimate] = useState("");
+  const [isRedo, setIsRedo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -38,13 +39,21 @@ export function QuickAddDrawer() {
       .then((r) => (r.ok ? r.json() : []))
       .then((list) => {
         setCourses(list);
-        if (list.length) setCourseId(list[0].id);
+        if (defaultCourseId && list.some((c) => c.id === defaultCourseId)) {
+          setCourseId(defaultCourseId);
+        } else if (list.length) {
+          setCourseId(list[0].id);
+        }
       });
-  }, [open]);
+  }, [open, defaultCourseId]);
 
   async function submit(e) {
     e.preventDefault();
-    if (!courseId || !dueLocal) return;
+    if (!courseId) {
+      setError("Add a class first with + Add class on Today.");
+      return;
+    }
+    if (!dueLocal) return;
     setSaving(true);
     setError(null);
     const res = await fetch(apiPaths.assignments, {
@@ -56,6 +65,7 @@ export function QuickAddDrawer() {
         title,
         due_at: new Date(dueLocal).toISOString(),
         estimate_minutes: estimate ? Number(estimate) : null,
+        is_redo: isRedo,
       }),
     });
     setSaving(false);
@@ -63,8 +73,21 @@ export function QuickAddDrawer() {
       setError(await res.text());
       return;
     }
+    const created = await res.json().catch(() => null);
+    if (created?.id) {
+      pushUndo?.({
+        label: "quick add",
+        run: async () => {
+          await fetch(apiPaths.assignment(created.id), {
+            method: "DELETE",
+            credentials: "include",
+          });
+        },
+      });
+    }
     setTitle("");
     setEstimate("");
+    setIsRedo(false);
     setOpen(false);
     router.refresh();
   }
@@ -94,7 +117,7 @@ export function QuickAddDrawer() {
             </div>
             <input
               className="rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="Assignment title"
+              placeholder="e.g. Essay redo, missing worksheet"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -126,6 +149,15 @@ export function QuickAddDrawer() {
               value={estimate}
               onChange={(e) => setEstimate(e.target.value)}
             />
+            <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+              <input type="checkbox" checked={isRedo} onChange={(e) => setIsRedo(e.target.checked)} />
+              Makeup / redo work
+            </label>
+            {courses.length === 0 ? (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Add a class first (+ Add class on the right).
+              </p>
+            ) : null}
             {error ? <p className="text-sm text-red-600">{error}</p> : null}
             <Button type="submit" disabled={saving}>
               {saving ? "Saving…" : "Add assignment"}

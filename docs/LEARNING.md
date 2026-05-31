@@ -15,7 +15,7 @@
 1. **Auth redirect** — `apps/web/src/middleware.js` → `lib/supabase/middleware.js`
 2. **API auth** — `apps/web/src/lib/supabase/api.js` (`requireUser`)
 3. **Shared contracts** — `packages/shared/src/schemas.js`, `api.js`
-4. **One full feature** — assignments: page `app/assignments/page.jsx` + `api/v1/assignments/route.js`
+4. **One full feature** — assignments: Today tab `app/page.jsx` + `api/v1/assignments/route.js`
 5. **Database rules** — `supabase/migrations/20250518000000_init.sql`
 
 ## How features are added

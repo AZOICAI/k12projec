@@ -9,6 +9,8 @@ export const termCreateSchema = z.object({
 });
 export const termUpdateSchema = termCreateSchema.partial();
 
+const gradePercentSchema = z.number().min(0).max(100).nullable().optional();
+
 export const courseCreateSchema = z.object({
   term_id: z.string().uuid().nullable().optional(),
   name: z.string().min(1).max(200),
@@ -17,6 +19,10 @@ export const courseCreateSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .optional()
     .default("#3B82F6"),
+  current_grade_percent: gradePercentSchema,
+  target_grade_percent: gradePercentSchema,
+  credit_hours: z.number().min(0.5).max(10).optional(),
+  is_weighted: z.boolean().optional(),
 });
 export const courseUpdateSchema = courseCreateSchema.partial();
 
@@ -37,8 +43,23 @@ export const assignmentCreateSchema = z.object({
   notes: z.string().max(5000).nullable().optional(),
   estimate_minutes: z.number().int().min(0).max(24 * 60).nullable().optional(),
   source_url: z.string().url().max(2000).nullable().optional(),
+  is_redo: z.boolean().optional(),
+  is_low_grade: z.boolean().optional(),
+  redo_of_assignment_id: z.string().uuid().nullable().optional(),
+  redo_dismissed: z.boolean().optional(),
+  score: z.number().min(0).nullable().optional(),
+  points_possible: z.number().min(0).nullable().optional(),
+  grade_percent: z.number().min(0).max(100).nullable().optional(),
 });
-export const assignmentUpdateSchema = assignmentCreateSchema.partial();
+export const assignmentUpdateSchema = assignmentCreateSchema
+  .partial()
+  .extend({
+    starter_done_at: z.string().datetime({ offset: true }).nullable().optional(),
+  });
+
+export const studySessionCreateSchema = z.object({
+  duration_minutes: z.number().int().min(1).max(300),
+});
 
 export const studyBlockCreateSchema = z.object({
   title: z.string().min(1).max(200),
@@ -47,7 +68,9 @@ export const studyBlockCreateSchema = z.object({
   course_id: z.string().uuid().nullable().optional(),
   assignment_id: z.string().uuid().nullable().optional(),
 });
-export const studyBlockUpdateSchema = studyBlockCreateSchema.partial();
+export const studyBlockUpdateSchema = studyBlockCreateSchema.partial().extend({
+  session_notes: z.string().max(5000).nullable().optional(),
+});
 
 export const preferencesUpdateSchema = z.object({
   timezone: z.string().min(1).max(100).optional(),
