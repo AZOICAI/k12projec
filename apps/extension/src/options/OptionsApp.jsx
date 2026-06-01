@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
 import { apiPaths, fullUrl } from "@k12/shared";
 import { signInWithPassword, signOut } from "../lib/supabase-auth";
+import { buildDefaultSettings, DEFAULT_APP_URL, isConfigured } from "../lib/defaults";
 import { getSession, getSettings, setSettings } from "../lib/storage";
 
-const defaults = {
-  appUrl: import.meta.env.VITE_APP_URL ?? "",
-  supabaseUrl: import.meta.env.VITE_SUPABASE_URL ?? "",
-  supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? "",
-};
-
 export function OptionsApp() {
+  const defaults = buildDefaultSettings();
   const [settings, setSettingsState] = useState(defaults);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedIn, setSignedIn] = useState(false);
@@ -20,11 +17,11 @@ export function OptionsApp() {
   useEffect(() => {
     void (async () => {
       let saved = await getSettings();
-      if (!saved && defaults.supabaseUrl && defaults.supabaseAnonKey) {
+      if (!saved) {
         await setSettings(defaults);
         saved = defaults;
       }
-      if (saved) setSettingsState({ ...defaults, ...saved });
+      setSettingsState({ ...defaults, ...saved });
       const session = await getSession();
       setSignedIn(!!session?.access_token);
       setLoading(false);
@@ -41,11 +38,15 @@ export function OptionsApp() {
   async function onSignIn(e) {
     e.preventDefault();
     setMessage(null);
+    if (!isConfigured(settings)) {
+      setMessage("Save connection settings first (Supabase fields in Advanced if needed).");
+      return;
+    }
     try {
       await setSettings(settings);
       await signInWithPassword(settings, email, password);
       setSignedIn(true);
-      setMessage("Signed in. You can use the popup to add assignments.");
+      setMessage("Signed in. Use the toolbar popup to see due work and quick-add.");
 
       const session = await getSession();
       if (session?.access_token) {
@@ -53,7 +54,7 @@ export function OptionsApp() {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (!res.ok) {
-          setMessage("Signed in, but could not verify API connection. Check App URL.");
+          setMessage("Signed in, but could not reach the app API. Check App URL.");
         }
       }
     } catch (err) {
@@ -67,14 +68,21 @@ export function OptionsApp() {
     setMessage("Signed out.");
   }
 
+  function openSignup() {
+    chrome.tabs.create({ url: fullUrl(settings.appUrl, "/signup") });
+  }
+
   if (loading) return <p className="muted">Loading…</p>;
 
   return (
     <div className="options">
       <h1>K12 Planner extension</h1>
       <p className="muted">
-        Use the same email and password as the web app. Set your live site URL (e.g. your Vercel
-        domain) in Connection below.
+        Same account as{" "}
+        <a href={DEFAULT_APP_URL} target="_blank" rel="noreferrer">
+          {DEFAULT_APP_URL.replace(/^https?:\/\//, "")}
+        </a>
+        . Save assignments from Google Classroom or quick-add from the popup.
       </p>
 
       <form onSubmit={saveSettings} className="form section">
@@ -83,28 +91,50 @@ export function OptionsApp() {
           App URL
           <input
             value={settings.appUrl}
-            onChange={(e) => setSettingsState((s) => ({ ...s, appUrl: e.target.value }))}
-            placeholder="https://your-app.vercel.app"
+            onChange={(e) => setSettingsState((s) => ({ ...s, appUrl: e.target.value.trim() }))}
+            placeholder="https://k12projec.vercel.app"
             required
           />
         </label>
-        <label>
-          Supabase URL
-          <input
-            value={settings.supabaseUrl}
-            onChange={(e) => setSettingsState((s) => ({ ...s, supabaseUrl: e.target.value }))}
-            placeholder="https://xxxx.supabase.co"
-            required
-          />
-        </label>
-        <label>
-          Supabase anon key
-          <input
-            value={settings.supabaseAnonKey}
-            onChange={(e) => setSettingsState((s) => ({ ...s, supabaseAnonKey: e.target.value }))}
-            required
-          />
-        </label>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced ? "Hide advanced" : "Advanced (Supabase)"}
+        </button>
+        {showAdvanced ? (
+          <>
+            <label>
+              Supabase URL
+              <input
+                value={settings.supabaseUrl}
+                onChange={(e) =>
+                  setSettingsState((s) => ({ ...s, supabaseUrl: e.target.value.trim() }))
+                }
+                placeholder="https://xxxx.supabase.co"
+              />
+            </label>
+            <label>
+              Supabase anon key
+              <input
+                value={settings.supabaseAnonKey}
+                onChange={(e) =>
+                  setSettingsState((s) => ({ ...s, supabaseAnonKey: e.target.value.trim() }))
+                }
+              />
+            </label>
+            <p className="muted small">
+              Developers: set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>{" "}
+              in <code>apps/extension/.env</code> before <code>npm run build</code> so students
+              only sign in.
+            </p>
+          </>
+        ) : (
+          <p className="muted small">
+            Supabase is preconfigured in the built extension when your teacher ships a release zip.
+          </p>
+        )}
         <label className="row">
           <input
             type="checkbox"
@@ -116,7 +146,7 @@ export function OptionsApp() {
               }))
             }
           />
-          Chrome notifications when assignments are due soon
+          Notify when assignments are due within 48 hours
         </label>
         <button type="submit">Save settings</button>
       </form>
@@ -129,7 +159,12 @@ export function OptionsApp() {
           <>
             <label>
               Email
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </label>
             <label>
               Password
@@ -141,6 +176,12 @@ export function OptionsApp() {
               />
             </label>
             <button type="submit">Sign in</button>
+            <p className="muted small">
+              No account?{" "}
+              <button type="button" className="link" onClick={openSignup}>
+                Create one on the website
+              </button>
+            </p>
           </>
         )}
         {signedIn ? (
@@ -151,11 +192,6 @@ export function OptionsApp() {
       </form>
 
       {message ? <p className={message.includes("failed") ? "error" : "ok"}>{message}</p> : null}
-
-      <p className="muted small">
-        Before publishing to the Chrome Web Store, add your production App URL to{" "}
-        <code>host_permissions</code> in <code>public/manifest.json</code>.
-      </p>
     </div>
   );
 }

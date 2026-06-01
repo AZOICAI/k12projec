@@ -1,8 +1,9 @@
-import { countDueSoon } from "./lib/api";
+import { fetchWorkSnapshot } from "./lib/api";
 import { getSession, getSettings } from "./lib/storage";
 
 const PENDING_TITLE_KEY = "pendingQuickAddTitle";
 const PENDING_SOURCE_KEY = "pendingQuickAddSource";
+const PENDING_DUE_KEY = "pendingQuickAddDue";
 
 async function notificationsEnabled() {
   const settings = await getSettings();
@@ -17,16 +18,22 @@ async function refreshBadge() {
       await chrome.action.setBadgeText({ text: "" });
       return;
     }
-    const n = await countDueSoon();
+    const { totalUrgent, overdue } = await fetchWorkSnapshot();
+    const n = totalUrgent;
     await chrome.action.setBadgeText({ text: n > 0 ? String(n) : "" });
-    await chrome.action.setBadgeBackgroundColor({ color: "#D97706" });
+    await chrome.action.setBadgeBackgroundColor({
+      color: overdue.length > 0 ? "#DC2626" : "#D97706",
+    });
 
     if (n > 0 && (await notificationsEnabled())) {
       chrome.notifications.create("due-soon", {
         type: "basic",
         iconUrl: "icons/icon128.png",
         title: "K12 Planner",
-        message: `${n} assignment(s) due within 48 hours`,
+        message:
+          overdue.length > 0
+            ? `${overdue.length} overdue, ${n - overdue.length} due soon`
+            : `${n} assignment(s) need attention`,
       });
     }
   } catch {
@@ -67,4 +74,4 @@ chrome.runtime.onMessage.addListener((msg) => {
   }
 });
 
-export { PENDING_TITLE_KEY, PENDING_SOURCE_KEY };
+export { PENDING_TITLE_KEY, PENDING_SOURCE_KEY, PENDING_DUE_KEY };

@@ -34,8 +34,10 @@ function originFromUrl(url) {
 }
 
 const env = loadEnv();
-const appOrigin = originFromUrl(env.VITE_APP_URL);
-const supabaseOrigin = originFromUrl(env.VITE_SUPABASE_URL);
+const appUrl = env.VITE_APP_URL || "https://k12projec.vercel.app";
+const supabaseUrl = env.VITE_SUPABASE_URL || "";
+const appOrigin = originFromUrl(appUrl);
+const supabaseOrigin = originFromUrl(supabaseUrl);
 
 const hostPermissions = [];
 if (appOrigin) hostPermissions.push(appOrigin);

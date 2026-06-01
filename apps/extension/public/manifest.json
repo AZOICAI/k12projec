@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "K12 Planner",
-  "version": "0.1.0",
-  "description": "Quickly add assignments to your K12 Planner account while you browse.",
+  "version": "0.2.0",
+  "description": "Save Classroom work to K12 Planner, see overdue and due-soon items, and open Today or Courses.",
   "homepage_url": "https://k12projec.vercel.app",
   "permissions": [
     "storage",

@@ -50,9 +50,10 @@ export default function HelpPage() {
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">4. Chrome extension</h2>
       <p className="mt-2">
-        Ask your teacher for the K12 Planner extension link. After installing, open extension{" "}
-        <strong>Options</strong>, set the app URL to <code>https://k12projec.vercel.app</code>, and
-        sign in with the same account as the website.
+        Install the K12 Planner extension from your teacher. Open <strong>Options</strong>, confirm
+        the app URL is <code>https://k12projec.vercel.app</code>, and sign in with the same email
+        and password as the website. The popup shows overdue and due-soon work plus quick-add; on
+        Google Classroom assignment pages, click <strong>Save to K12 Planner</strong>.
       </p>
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">5. Schedule & focus</h2>

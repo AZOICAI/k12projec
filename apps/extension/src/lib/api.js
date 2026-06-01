@@ -1,6 +1,7 @@
-import { apiPaths, fullUrl, isDueSoon } from "@k12/shared";
+import { apiPaths, fullUrl } from "@k12/shared";
+import { buildWorkQueue } from "./workQueue";
 import { ensureFreshSession } from "./supabase-auth";
-import { getSession, getSettings } from "./storage";
+import { getSettings } from "./storage";
 
 async function authHeaders() {
   const settings = await getSettings();
@@ -47,14 +48,19 @@ export async function createAssignment(body) {
   });
 }
 
-/** Count non-done assignments due within 48 hours (shared rule with web). */
-export async function countDueSoon() {
+/** Load assignments for badge + popup (overdue through next 2 weeks). */
+export async function fetchAssignmentsWindow() {
   const now = new Date();
-  const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+  const from = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  const to = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
   const q = new URLSearchParams({
-    from: now.toISOString(),
-    to: in48h.toISOString(),
+    from: from.toISOString(),
+    to: to.toISOString(),
   });
-  const items = await apiFetch(`${apiPaths.assignments}?${q}`);
-  return items.filter((a) => a.status !== "done" && isDueSoon(a.due_at, now.getTime())).length;
+  return apiFetch(`${apiPaths.assignments}?${q}`);
+}
+
+export async function fetchWorkSnapshot() {
+  const items = await fetchAssignmentsWindow();
+  return buildWorkQueue(items);
 }
