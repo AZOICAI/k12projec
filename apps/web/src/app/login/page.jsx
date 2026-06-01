@@ -9,14 +9,19 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const err = searchParams.get("error");
+  const detail = searchParams.get("detail");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const initialMessage =
     err === "domain"
       ? "This Google account is not on an approved school email domain for the beta."
-      : err
-        ? "Sign-in failed. Try again."
-        : "";
+      : err === "auth" && detail
+        ? decodeURIComponent(detail)
+        : err === "auth"
+          ? "Sign-in link expired or invalid. Try again, or sign up and use a fresh confirmation email."
+          : err
+            ? "Sign-in failed. Try again."
+            : "";
   const [message, setMessage] = useState(initialMessage);
   const [loading, setLoading] = useState(false);
 
@@ -28,7 +33,14 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
-      setMessage(error.message);
+      const msg = error.message ?? "Sign-in failed.";
+      if (/email not confirmed/i.test(msg)) {
+        setMessage(
+          "Confirm your email first (check inbox and spam), then sign in. The link must open the same site you signed up on.",
+        );
+      } else {
+        setMessage(msg);
+      }
       return;
     }
     router.push("/app");

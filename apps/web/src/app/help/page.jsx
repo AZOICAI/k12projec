@@ -13,8 +13,19 @@ export default function HelpPage() {
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">1. Sign up</h2>
       <p className="mt-2">
-        Create an account with your school email if your teacher gave you an invite code or domain
-        requirement. Sign in with email or Google if your school enabled it.
+        Open{" "}
+        <Link className="text-blue-600 hover:underline" href="https://k12projec.vercel.app/signup">
+          k12projec.vercel.app/signup
+        </Link>{" "}
+        (not localhost). Create an account with your school email if your teacher gave you an invite
+        code. After sign-up, check email (and spam) and click the confirmation link — it should open
+        the same site. Then sign in.
+      </p>
+      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+        If the email link says <strong>“This site can’t be reached,”</strong> your teacher needs to
+        set Supabase Site URL to <code>https://k12projec.vercel.app</code> (see maintainer docs).
+        You can also try <strong>Continue with Google</strong> on the login page if your school
+        enabled it.
       </p>
 
       <h2 className="mt-8 text-lg font-medium text-zinc-900 dark:text-zinc-50">2. Add courses</h2>

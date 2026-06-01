@@ -34,10 +34,23 @@ Run in the SQL editor, in order:
 | `CANVAS_CLIENT_SECRET` | Canvas | Keep secret |
 | `CANVAS_REDIRECT_URI` | Canvas | `https://k12projec.vercel.app/api/v1/canvas/callback` |
 
-## Auth redirect URLs (Supabase)
+## Auth redirect URLs (Supabase) — required for sign-up / Google login
 
-- Site URL: `https://k12projec.vercel.app`
-- Redirect: `https://k12projec.vercel.app/auth/callback`
+In **Supabase → Authentication → URL configuration**:
+
+| Setting | Value |
+|---------|--------|
+| **Site URL** | `https://k12projec.vercel.app` (not `localhost` for production users) |
+| **Redirect URLs** (add each) | `https://k12projec.vercel.app/auth/callback` |
+| | `http://localhost:3000/auth/callback` (only for local dev) |
+
+If **Site URL** is `http://localhost:3000`, confirmation emails send friends to localhost → browser shows **“This site can’t be reached.”**
+
+**Email confirmations:** Authentication → Providers → Email → ensure “Confirm email” matches your beta plan. If enabled, users must click the email link before password sign-in works.
+
+**Google:** Enable Google provider and add the same redirect URLs.
+
+**Vercel:** `NEXT_PUBLIC_APP_URL` must be `https://k12projec.vercel.app` (no trailing slash).
 
 ## Verify account deletion
 

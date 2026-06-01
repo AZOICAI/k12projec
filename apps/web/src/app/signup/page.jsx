@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiPaths } from "@k12/shared";
+import { getAuthCallbackUrl } from "@/lib/auth/redirect";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SignupPage() {
@@ -43,13 +44,27 @@ export default function SignupPage() {
 
     setLoading(true);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    const emailRedirectTo = getAuthCallbackUrl();
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo },
+    });
     setLoading(false);
     if (error) {
       setMessage(error.message);
       return;
     }
-    setMessage("Check your email to confirm, then sign in.");
+    if (data.session) {
+      setMessage("Account created — redirecting…");
+      router.push("/app");
+      router.refresh();
+      return;
+    }
+    const site = typeof window !== "undefined" ? window.location.origin : "";
+    setMessage(
+      `Check your email to confirm your account, then sign in. The link should open ${site || "this site"} — if it says the site can't be reached, ask your teacher to fix Supabase Site URL settings.`,
+    );
     router.refresh();
   }
 
