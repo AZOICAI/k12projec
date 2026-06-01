@@ -25,14 +25,14 @@ Built with **JavaScript** (Next.js, React, Vite).
 
 No install on your computer is required for the website — only the browser.
 
-## Chrome extension
+## Chrome extension (v0.2)
 
-1. Set `VITE_APP_URL=https://k12projec.vercel.app` in `apps/extension/.env` (see [`.env.example`](apps/extension/.env.example)).
+1. Copy `apps/extension/.env.example` → `apps/extension/.env` and set `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (same as the web app).
 2. From the repo root: `npm install` then `npm run build -w extension`.
 3. In Chrome: `chrome://extensions` → **Developer mode** → **Load unpacked** → `apps/extension/dist`.
-4. Open extension **Options** → save settings → **Sign in** with the same account as the website.
+4. Open extension **Options** → **Sign in** (app URL defaults to production). Popup shows overdue / due-soon work and quick-add.
 
-**Chrome Web Store:** `npm run package:extension:store` → upload `apps/extension/release/k12-planner-v0.1.0.zip`. Listing copy: `apps/extension/store/LISTING.txt`. Privacy policy: `https://k12projec.vercel.app/privacy`.
+**Chrome Web Store:** `npm run package:extension:store` → upload the release zip. Listing copy: `apps/extension/store/LISTING.txt`.
 
 ## Maintainer setup (Supabase + Vercel)
 
