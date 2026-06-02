@@ -21,6 +21,7 @@ export const apiPaths = {
   canvasSync: `${API_V1_PREFIX}/canvas/sync`,
   canvasDisconnect: `${API_V1_PREFIX}/canvas/disconnect`,
   canvasPersonalToken: `${API_V1_PREFIX}/canvas/personal-token`,
+  tutorChat: `${API_V1_PREFIX}/tutor/chat`,
 };
 
 /** Build full URL for extension (pass origin like https://app.example.com) */

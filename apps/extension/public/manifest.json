@@ -1,28 +1,47 @@
 {
   "manifest_version": 3,
   "name": "K12 Planner",
-  "version": "0.2.0",
-  "description": "Save Classroom work to K12 Planner, see overdue and due-soon items, and open Today or Courses.",
+  "version": "0.3.0",
+  "description": "K-12 planner with Canvas Command Center sidebar, Classroom save, and due-work tracking.",
   "homepage_url": "https://k12projec.vercel.app",
   "permissions": [
     "storage",
     "alarms",
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "declarativeNetRequest"
   ],
   "host_permissions": [
     "https://k12projec.vercel.app/*",
-    "https://hlktpqugmavhevcflzyb.supabase.co/*"
+    "https://*.supabase.co/*",
+    "https://*.instructure.com/*"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "ruleset_placeholder",
+        "enabled": true,
+        "path": "rules/dnr-rules.json"
+      }
+    ]
+  },
   "content_scripts": [
     {
-      "matches": [
-        "https://classroom.google.com/*"
-      ],
-      "js": [
-        "content/classroom.js"
-      ],
+      "matches": ["https://classroom.google.com/*"],
+      "js": ["content/classroom.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.instructure.com/*"],
+      "js": ["content/canvas-content.js"],
+      "css": ["content/canvas-content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["canvas/sidebar.js", "assets/*"],
+      "matches": ["https://*.instructure.com/*"]
     }
   ],
   "action": {

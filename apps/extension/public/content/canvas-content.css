@@ -1,0 +1,9 @@
+/* Toggle lives in Canvas nav — minimal host styles only */
+#k12-planner-canvas-toggle a:hover {
+  opacity: 0.9;
+}
+
+#k12-planner-canvas-toggle a:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}

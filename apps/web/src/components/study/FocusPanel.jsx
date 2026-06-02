@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { StudyTimer } from "@/components/study/StudyTimer";
+import { TutorChat } from "@/components/study/TutorChat";
 
-export function FocusPanel({ blocks, error }) {
+export function FocusPanel({ blocks, assignments, error }) {
   const router = useRouter();
   const nextBlock = useMemo(() => {
     const now = Date.now();
@@ -20,34 +21,41 @@ export function FocusPanel({ blocks, error }) {
         </p>
       ) : null}
 
-      <div className="max-w-sm">
-        <StudyTimer onSessionLogged={() => router.refresh()} />
-      </div>
-
-      {nextBlock ? (
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <p className="text-xs font-medium uppercase text-zinc-500">Up next</p>
-          <p className="mt-1 font-medium">{nextBlock.title}</p>
-          <p className="text-sm text-zinc-500">
-            {new Date(nextBlock.starts_at).toLocaleString()} –{" "}
-            {new Date(nextBlock.ends_at).toLocaleTimeString(undefined, {
-              hour: "numeric",
-              minute: "2-digit",
-            })}
-          </p>
+      <div className="grid gap-6 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:items-start">
+        <div className="flex flex-col gap-4">
+          <StudyTimer onSessionLogged={() => router.refresh()} />
+          {nextBlock ? (
+            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
+              <p className="text-xs font-medium uppercase text-zinc-500">Up next</p>
+              <p className="mt-1 font-medium">{nextBlock.title}</p>
+              <p className="text-sm text-zinc-500">
+                {new Date(nextBlock.starts_at).toLocaleString()} –{" "}
+                {new Date(nextBlock.ends_at).toLocaleTimeString(undefined, {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              Nothing scheduled yet.{" "}
+              <Link href="/app/schedule" className="font-medium text-blue-600 hover:underline">
+                Plan your day on Schedule →
+              </Link>
+            </p>
+          )}
         </div>
-      ) : (
-        <p className="text-sm text-zinc-500">
-          Nothing scheduled yet.{" "}
-          <Link href="/app/schedule" className="font-medium text-blue-600 hover:underline">
-            Plan your day on Schedule →
-          </Link>
-        </p>
-      )}
+
+        <TutorChat assignments={assignments} />
+      </div>
 
       <p className="text-sm text-zinc-500">
         <Link href="/app/schedule" className="text-blue-600 hover:underline">
           Edit schedule
+        </Link>
+        {" · "}
+        <Link href="/app/courses" className="text-blue-600 hover:underline">
+          Courses & Canvas sync
         </Link>
       </p>
     </div>

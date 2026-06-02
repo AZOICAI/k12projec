@@ -61,6 +61,12 @@ export const studySessionCreateSchema = z.object({
   duration_minutes: z.number().int().min(1).max(300),
 });
 
+export const tutorChatSchema = z.object({
+  assignment_id: z.string().uuid().optional(),
+  assignment_text: z.string().min(1).max(8000),
+  chat_message: z.string().min(1).max(2000),
+});
+
 export const studyBlockCreateSchema = z.object({
   title: z.string().min(1).max(200),
   starts_at: z.string().datetime({ offset: true }),

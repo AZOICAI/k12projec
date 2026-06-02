@@ -1,4 +1,5 @@
 import { fetchWorkSnapshot } from "./lib/api";
+import { fetchCanvasDashboardData } from "./lib/canvasDashboard";
 import { getSession, getSettings } from "./lib/storage";
 
 const PENDING_TITLE_KEY = "pendingQuickAddTitle";
@@ -68,10 +69,37 @@ chrome.storage.onChanged.addListener((_changes, area) => {
   if (area === "session" || area === "sync") void refreshBadge();
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "openPopup") {
     chrome.action.openPopup?.();
+    return false;
   }
+
+  if (msg?.type === "GET_CANVAS_DASHBOARD") {
+    void (async () => {
+      try {
+        const settings = await getSettings();
+        const session = await getSession();
+        if (!settings?.appUrl || !session?.access_token) {
+          sendResponse({
+            ok: false,
+            error: "Not signed in. Open K12 Planner extension Options and sign in.",
+          });
+          return;
+        }
+        const data = await fetchCanvasDashboardData();
+        sendResponse({ ok: true, data });
+      } catch (e) {
+        sendResponse({
+          ok: false,
+          error: e instanceof Error ? e.message : "Failed to load dashboard",
+        });
+      }
+    })();
+    return true;
+  }
+
+  return false;
 });
 
 export { PENDING_TITLE_KEY, PENDING_SOURCE_KEY, PENDING_DUE_KEY };

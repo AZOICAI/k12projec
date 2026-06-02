@@ -39,7 +39,7 @@ const supabaseUrl = env.VITE_SUPABASE_URL || "";
 const appOrigin = originFromUrl(appUrl);
 const supabaseOrigin = originFromUrl(supabaseUrl);
 
-const hostPermissions = [];
+const hostPermissions = ["https://*.instructure.com/*"];
 if (appOrigin) hostPermissions.push(appOrigin);
 if (supabaseOrigin) hostPermissions.push(supabaseOrigin);
 

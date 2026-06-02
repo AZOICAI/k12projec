@@ -14,3 +14,4 @@ dist
 
 apps/extension/release/
 **/New Text Document*.txt
+.env*
