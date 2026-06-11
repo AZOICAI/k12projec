@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { patchAssignment } from "@/lib/assignments/patchAssignment";
 import { DashboardStatBlocks } from "./DashboardStatBlocks";
 import { DashboardWeekList } from "./DashboardWeekList";
+import { StartMyDay } from "./StartMyDay";
 
 export function DashboardClient({ initialSummary, pushUndo }) {
   const router = useRouter();
@@ -30,6 +31,11 @@ export function DashboardClient({ initialSummary, pushUndo }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <StartMyDay
+        courses={s.courses}
+        onMarkDone={(a) => setStatus(a.id, "done", a.status ?? "todo")}
+      />
+
       <DashboardStatBlocks summary={s} />
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">

@@ -55,9 +55,7 @@ export function NeedsRedoPanel({ items, onRefresh, pushUndo }) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800">
         <p>No low grades detected yet.</p>
-        <p className="mt-2 text-xs">
-          Sync Canvas in Settings to pull scores, or set a class grade target on the right.
-        </p>
+        <p className="mt-2 text-xs">Scores sync automatically from Canvas — nothing to fix here.</p>
       </div>
     );
   }
@@ -81,6 +79,12 @@ export function NeedsRedoPanel({ items, onRefresh, pushUndo }) {
                   {a.courses?.name ?? "Class"} · scored {formatGradeLabel(a)} (below {threshold}%)
                   {a.status === "done" ? " · Turned in" : ""} · {formatRelativeDue(a.due_at, now)}
                 </p>
+                {a.redo_impact_percent != null && a.course_grade_percent != null ? (
+                  <p className="mt-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                    Redo for full credit: class grade {a.course_grade_percent}% → est.{" "}
+                    {a.redo_impact_percent}%
+                  </p>
+                ) : null}
               </div>
               <div className="flex shrink-0 flex-wrap gap-2">
                 <button

@@ -35,7 +35,7 @@ export async function reconcileGradedAssignments(supabase, userId, assignments) 
 
   const { error } = await supabase
     .from("assignments")
-    .update({ status: "done", is_low_grade: false })
+    .update({ status: "done" })
     .in("id", ids)
     .eq("user_id", userId);
 

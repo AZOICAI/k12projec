@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { StudyTimer } from "@/components/study/StudyTimer";
 import { TutorChat } from "@/components/study/TutorChat";
 
-export function FocusPanel({ blocks, assignments, error }) {
+export function FocusPanel({ blocks, assignments, error, initialAssignmentId = null }) {
   const router = useRouter();
   const nextBlock = useMemo(() => {
     const now = Date.now();
@@ -46,7 +46,7 @@ export function FocusPanel({ blocks, assignments, error }) {
           )}
         </div>
 
-        <TutorChat assignments={assignments} />
+        <TutorChat assignments={assignments} initialAssignmentId={initialAssignmentId} />
       </div>
 
       <p className="text-sm text-zinc-500">

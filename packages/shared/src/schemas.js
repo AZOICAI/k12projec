@@ -54,8 +54,18 @@ export const studySessionCreateSchema = z.object({
 
 export const tutorChatSchema = z.object({
   assignment_id: z.string().uuid().optional(),
-  assignment_text: z.string().min(1).max(8000),
+  assignment_text: z.string().max(8000).optional().default(""),
   chat_message: z.string().min(1).max(2000),
+  history: z
+    .array(
+      z.object({
+        role: z.enum(["user", "tutor"]),
+        text: z.string().max(4000),
+      }),
+    )
+    .max(20)
+    .optional()
+    .default([]),
 });
 
 export const studyBlockCreateSchema = z.object({

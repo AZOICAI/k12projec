@@ -19,11 +19,26 @@ export function mapAssignmentForDashboard(a) {
   };
 }
 
+/** Most teachers only accept redos on recent work — don't surface ancient low grades. */
+const REDO_WINDOW_DAYS = 60;
+
+function isWithinRedoWindow(assignment, ts) {
+  if (!assignment.due_at) return true;
+  const due = new Date(assignment.due_at).getTime();
+  if (Number.isNaN(due)) return true;
+  return ts - due <= REDO_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+}
+
 /** Graded work below class target with no active redo scheduled yet. */
 export function computeNeedsRedoAssignments(assignments, courses, now = new Date()) {
   const ts = now.getTime();
   return assignments
-    .filter((a) => !isArchivedAssignment(a, ts) && assignmentNeedsRedo(a, courses, assignments))
+    .filter(
+      (a) =>
+        !isArchivedAssignment(a, ts) &&
+        isWithinRedoWindow(a, ts) &&
+        assignmentNeedsRedo(a, courses, assignments),
+    )
     .sort((a, b) => {
       const pa = a.grade_percent ?? 0;
       const pb = b.grade_percent ?? 0;

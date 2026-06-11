@@ -2,8 +2,7 @@
 
 import { apiPaths } from "@k12/shared";
 import { useRouter } from "next/navigation";
-import { formatGradeLabel, getLowGradeThreshold } from "@/lib/assignments/grades";
-import { patchAssignment } from "@/lib/assignments/patchAssignment";
+import { getLowGradeThreshold } from "@/lib/assignments/grades";
 import { NeedsRedoPanel } from "@/components/dashboard/NeedsRedoPanel";
 
 export function CourseRedoSection({ course, pushUndo }) {
@@ -13,19 +12,6 @@ export function CourseRedoSection({ course, pushUndo }) {
     course.current_grade_percent != null &&
     course.target_grade_percent != null &&
     Number(course.current_grade_percent) < Number(course.target_grade_percent);
-
-  async function markLowGrade(assignment, next) {
-    const prev = Boolean(assignment.is_low_grade);
-    const ok = await patchAssignment(assignment.id, { is_low_grade: next });
-    if (!ok) return;
-    pushUndo?.({
-      label: "mark low grade",
-      run: async () => {
-        await patchAssignment(assignment.id, { is_low_grade: prev });
-      },
-    });
-    router.refresh();
-  }
 
   async function scheduleClassRedo() {
     const due = new Date();
@@ -67,7 +53,9 @@ export function CourseRedoSection({ course, pushUndo }) {
 
       {course.needs_redo?.length > 0 ? (
         <div className="mt-3">
-          <p className="mb-2 text-xs text-zinc-500">Low scores (below {threshold}%)</p>
+          <p className="mb-2 text-xs text-zinc-500">
+            Scores below {threshold}% — pulled automatically from Canvas
+          </p>
           <NeedsRedoPanel
             items={course.needs_redo}
             onRefresh={() => router.refresh()}
@@ -76,33 +64,9 @@ export function CourseRedoSection({ course, pushUndo }) {
         </div>
       ) : (
         <p className="mt-2 text-xs text-zinc-500">
-          Sync Canvas in Settings to pull assignment scores, or mark a turned-in assignment below.
+          No low scores in this class — grades sync automatically from Canvas.
         </p>
       )}
-
-      {course.markable_done?.length > 0 ? (
-        <ul className="mt-3 space-y-2">
-          <p className="text-xs font-medium text-zinc-500">Turned in — mark if low grade</p>
-          {course.markable_done.map((a) => (
-            <li
-              key={a.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/80 px-3 py-2 text-xs dark:border-zinc-800 dark:bg-zinc-900/50"
-            >
-              <span className="font-medium text-zinc-800 dark:text-zinc-200">
-                {a.title}
-                {a.grade_percent != null ? ` · ${formatGradeLabel(a)}` : ""}
-              </span>
-              <button
-                type="button"
-                className="text-violet-700 underline dark:text-violet-300"
-                onClick={() => void markLowGrade(a, true)}
-              >
-                Mark low grade
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
     </div>
   );
 }

@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { AutoCanvasSync } from "@/components/canvas/AutoCanvasSync";
 import { FocusTimerKeeper } from "@/components/study/FocusTimerKeeper";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "../ui/Button";
@@ -54,6 +55,7 @@ export function AppShell({ userEmail, signOutAction, children }) {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
       <FocusTimerKeeper />
+      <AutoCanvasSync />
       <header className="sticky top-0 z-40 border-b border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/95">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex items-center gap-3">

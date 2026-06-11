@@ -1,11 +1,14 @@
 "use client";
 
 import { apiPaths } from "@k12/shared";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { FocusPanel } from "@/components/study/FocusPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 
-export default function FocusPage() {
+function FocusPageInner() {
+  const searchParams = useSearchParams();
+  const initialAssignmentId = searchParams.get("assignment");
   const [blocks, setBlocks] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [error, setError] = useState(null);
@@ -21,10 +24,10 @@ export default function FocusPage() {
     setLoading(true);
 
     const from = new Date();
-    from.setDate(from.getDate() - 7);
+    from.setDate(from.getDate() - 60);
     from.setHours(0, 0, 0, 0);
     const to = new Date();
-    to.setDate(to.getDate() + 60);
+    to.setDate(to.getDate() + 180);
     to.setHours(23, 59, 59, 999);
 
     const blockFrom = new Date();
@@ -63,14 +66,27 @@ export default function FocusPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Focus"
-        description="Study timer plus step-by-step hints for the assignment you're working on."
+        description="Study timer plus an AI tutor for the assignment you're working on."
       />
 
       {loading ? (
         <p className="text-sm text-zinc-500">Loading…</p>
       ) : (
-        <FocusPanel blocks={sorted} assignments={assignments} error={error} />
+        <FocusPanel
+          blocks={sorted}
+          assignments={assignments}
+          error={error}
+          initialAssignmentId={initialAssignmentId}
+        />
       )}
     </div>
+  );
+}
+
+export default function FocusPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-zinc-500">Loading…</p>}>
+      <FocusPageInner />
+    </Suspense>
   );
 }

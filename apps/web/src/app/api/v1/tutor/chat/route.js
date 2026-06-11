@@ -2,6 +2,7 @@ import { tutorChatSchema } from "@k12/shared";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api/http";
 import { simulateTutorResponse } from "@/lib/tutor/chat";
+import { generateTutorReply, isTutorLlmConfigured } from "@/lib/tutor/llm";
 import { requireUser } from "@/lib/supabase/api";
 
 function buildAssignmentText(row) {
@@ -38,10 +39,19 @@ export async function POST(request) {
     assignmentText = buildAssignmentText(row) || assignmentText;
   }
 
-  const reply = simulateTutorResponse(assignmentText, parsed.data.chat_message);
+  if (isTutorLlmConfigured()) {
+    try {
+      const reply = await generateTutorReply({
+        assignmentText,
+        history: parsed.data.history,
+        message: parsed.data.chat_message,
+      });
+      return NextResponse.json({ reply, source: "llm" });
+    } catch {
+      /* fall through to deterministic hints so the tutor never goes dark */
+    }
+  }
 
-  return NextResponse.json({
-    reply,
-    assignment_text: assignmentText,
-  });
+  const reply = simulateTutorResponse(assignmentText, parsed.data.chat_message);
+  return NextResponse.json({ reply, source: "hints" });
 }

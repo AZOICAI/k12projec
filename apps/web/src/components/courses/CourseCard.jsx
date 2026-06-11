@@ -50,6 +50,17 @@ export function CourseCard({ course, pushUndo }) {
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full" style={{ backgroundColor: course.color }} aria-hidden />
           <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{course.name}</h2>
+          {course.current_grade_percent != null ? (
+            <span
+              className={`rounded-full px-2 py-0.5 text-sm font-semibold tabular-nums ${
+                course.class_below_target
+                  ? "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+                  : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
+              }`}
+            >
+              {course.current_grade_percent}%
+            </span>
+          ) : null}
         </div>
         <button
           type="button"

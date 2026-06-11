@@ -54,11 +54,18 @@ export function courseById(courses, courseId) {
   return courses?.find((c) => c.id === courseId) ?? null;
 }
 
-/** Assignment counts as needing redo (low score, not dismissed, no redo scheduled). */
+/**
+ * Assignment counts as needing redo (low score, not dismissed, no redo scheduled).
+ *
+ * Driven by the actual Canvas grade: a completed assignment with a score below the
+ * class target is exactly what grade recovery is for, so "done" status does NOT
+ * exclude it. A real grade always wins over the manual is_low_grade flag, so stale
+ * manual flags can never resurface work that now has a passing score.
+ */
 export function assignmentNeedsRedo(assignment, courses, allAssignments) {
-  if (assignment.status === "done") return false;
   if (assignment.redo_dismissed) return false;
   if (assignment.redo_of_assignment_id) return false;
+  if (assignment.is_redo) return false;
 
   const hasRedoChild = (allAssignments ?? []).some(
     (a) => a.redo_of_assignment_id === assignment.id,
@@ -68,11 +75,50 @@ export function assignmentNeedsRedo(assignment, courses, allAssignments) {
   const course = courseById(courses, assignment.course_id);
   const threshold = getLowGradeThreshold(course);
 
-  if (assignment.grade_percent != null && !Number.isNaN(Number(assignment.grade_percent))) {
-    return Number(assignment.grade_percent) < threshold;
+  const gradePercent =
+    assignment.grade_percent != null && !Number.isNaN(Number(assignment.grade_percent))
+      ? Number(assignment.grade_percent)
+      : computeGradePercent(assignment.score, assignment.points_possible);
+
+  if (gradePercent != null) {
+    return gradePercent < threshold;
   }
 
   return Boolean(assignment.is_low_grade);
+}
+
+/**
+ * Estimate the course percent if this assignment were redone for full credit.
+ * Uses total earned/possible points across the course's graded work to size the
+ * bump, applied on top of the displayed course grade. Returns null when there
+ * isn't enough data to estimate.
+ */
+export function estimateRedoImpact(assignment, courseAssignments, courseGradePercent) {
+  const score = Number(assignment.score);
+  const points = Number(assignment.points_possible);
+  if (!Number.isFinite(score) || !Number.isFinite(points) || points <= 0) return null;
+
+  let totalPoints = 0;
+  for (const a of courseAssignments ?? []) {
+    const p = Number(a.points_possible);
+    const s = Number(a.score);
+    if (Number.isFinite(p) && p > 0 && Number.isFinite(s)) {
+      totalPoints += p;
+    }
+  }
+  if (totalPoints <= 0) return null;
+
+  const base =
+    courseGradePercent != null && Number.isFinite(Number(courseGradePercent))
+      ? Number(courseGradePercent)
+      : null;
+  if (base == null) return null;
+
+  const deltaPct = ((points - score) / totalPoints) * 100;
+  if (!Number.isFinite(deltaPct) || deltaPct <= 0) return null;
+
+  const estimated = Math.min(100, base + deltaPct);
+  return Math.round(estimated * 10) / 10;
 }
 
 export function formatGradeLabel(assignment) {

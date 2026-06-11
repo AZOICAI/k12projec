@@ -1,11 +1,8 @@
 import { isAssignmentOverdue, isDueToday } from "@k12/shared";
+import { estimateRedoImpact } from "@/lib/assignments/grades";
 import { isArchivedAssignment } from "@/lib/assignments/stale";
 import { computeNeedsRedoAssignments, mapAssignmentForDashboard } from "./assignmentLists";
 import { isSoonDueAssignment } from "./assignmentBuckets";
-
-function hasRedoChild(allAssignments, assignmentId) {
-  return allAssignments.some((a) => a.redo_of_assignment_id === assignmentId);
-}
 
 export function buildCourseDetailCards(courses, assignments, now = new Date()) {
   const ts = now.getTime();
@@ -29,21 +26,19 @@ export function buildCourseDetailCards(courses, assignments, now = new Date()) {
       const soon = active
         .filter((a) => isSoonDueAssignment(a, now))
         .map(mapAssignmentForDashboard);
-      const needsRedo = allNeedsRedo.filter((a) => a.course_id === course.id);
-      const needsRedoIds = new Set(needsRedo.map((a) => a.id));
-
-      const markableDone = assignments
-        .filter(
-          (a) =>
-            a.course_id === course.id &&
-            a.status === "done" &&
-            !isArchivedAssignment(a, ts) &&
-            !needsRedoIds.has(a.id) &&
-            !a.redo_dismissed &&
-            !hasRedoChild(assignments, a.id),
-        )
-        .slice(0, 8)
-        .map(mapAssignmentForDashboard);
+      const courseAssignments = assignments.filter((a) => a.course_id === course.id);
+      const needsRedo = allNeedsRedo
+        .filter((a) => a.course_id === course.id)
+        .map((a) => ({
+          ...a,
+          course_grade_percent:
+            course.current_grade_percent != null ? Number(course.current_grade_percent) : null,
+          redo_impact_percent: estimateRedoImpact(
+            a,
+            courseAssignments,
+            course.current_grade_percent,
+          ),
+        }));
 
       const classBelowTarget =
         course.current_grade_percent != null &&
@@ -66,7 +61,6 @@ export function buildCourseDetailCards(courses, assignments, now = new Date()) {
         due_today: dueToday,
         soon,
         needs_redo: needsRedo,
-        markable_done: markableDone,
         class_below_target: classBelowTarget,
         focus_score:
           overdue.length * 3 +
