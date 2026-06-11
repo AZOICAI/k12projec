@@ -26,15 +26,6 @@ export const courseCreateSchema = z.object({
 });
 export const courseUpdateSchema = courseCreateSchema.partial();
 
-export const courseMeetingSchema = z.object({
-  weekday: z.number().int().min(0).max(6),
-  start_minutes: z.number().int().min(0).max(1439),
-  end_minutes: z.number().int().min(0).max(1439),
-});
-export const courseMeetingCreateSchema = courseMeetingSchema.extend({
-  course_id: z.string().uuid(),
-});
-
 export const assignmentCreateSchema = z.object({
   course_id: z.string().uuid(),
   title: z.string().min(1).max(500),

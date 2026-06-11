@@ -9,7 +9,8 @@ export async function GET(request) {
 
   const { data, error } = await supabase
     .from("courses")
-    .select("*, course_meetings(*)")
+    .select("*")
+    .eq("user_id", user.id)
     .order("name");
 
   if (error) return jsonError(error.message, 500);

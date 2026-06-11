@@ -50,7 +50,7 @@ export function QuickAddDrawer({ defaultCourseId = null, pushUndo }) {
   async function submit(e) {
     e.preventDefault();
     if (!courseId) {
-      setError("Add a class first with + Add class on Today.");
+      setError("Add a class first on the Courses tab.");
       return;
     }
     if (!dueLocal) return;
@@ -155,7 +155,7 @@ export function QuickAddDrawer({ defaultCourseId = null, pushUndo }) {
             </label>
             {courses.length === 0 ? (
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                Add a class first (+ Add class on the right).
+                Add a class first on the Courses tab.
               </p>
             ) : null}
             {error ? <p className="text-sm text-red-600">{error}</p> : null}

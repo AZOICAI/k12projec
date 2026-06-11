@@ -44,6 +44,16 @@ export function TermsPanel() {
     setMessage("Term added.");
   }
 
+  async function deleteTerm(id) {
+    setMessage(null);
+    const res = await fetch(apiPaths.term(id), { method: "DELETE", credentials: "include" });
+    if (!res.ok) {
+      setMessage("Could not delete term.");
+      return;
+    }
+    await load();
+  }
+
   return (
     <Card className="flex flex-col gap-4">
       <div>
@@ -81,11 +91,23 @@ export function TermsPanel() {
       {message ? <p className="text-sm text-zinc-600">{message}</p> : null}
       <ul className="text-sm text-zinc-700 dark:text-zinc-300">
         {terms.map((t) => (
-          <li key={t.id} className="border-b border-zinc-100 py-2 dark:border-zinc-800">
-            <span className="font-medium">{t.name}</span>
-            <span className="ml-2 text-zinc-500">
-              {t.starts_on} → {t.ends_on}
+          <li
+            key={t.id}
+            className="flex items-center justify-between gap-2 border-b border-zinc-100 py-2 dark:border-zinc-800"
+          >
+            <span className="min-w-0">
+              <span className="font-medium">{t.name}</span>
+              <span className="ml-2 text-zinc-500">
+                {t.starts_on} → {t.ends_on}
+              </span>
             </span>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-zinc-500 hover:text-red-600 dark:hover:text-red-400"
+              onClick={() => void deleteTerm(t.id)}
+            >
+              Delete
+            </button>
           </li>
         ))}
       </ul>

@@ -3,6 +3,7 @@ export const API_V1_PREFIX = "/api/v1";
 
 export const apiPaths = {
   terms: `${API_V1_PREFIX}/terms`,
+  term: (id) => `${API_V1_PREFIX}/terms/${id}`,
   course: (id) => `${API_V1_PREFIX}/courses/${id}`,
   courses: `${API_V1_PREFIX}/courses`,
   assignment: (id) => `${API_V1_PREFIX}/assignments/${id}`,

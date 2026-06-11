@@ -2,18 +2,79 @@
 
 import { apiPaths } from "@k12/shared";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useUndoStack } from "@/hooks/useUndoStack";
+import { NeedsRedoPanel } from "@/components/dashboard/NeedsRedoPanel";
 import { CanvasSyncHint } from "./CanvasSyncHint";
 import { CourseCard } from "./CourseCard";
+import { CourseFilterBar } from "./CourseFilterBar";
+import { FilteredWorkList } from "./FilteredWorkList";
 
-export function CoursesClient({ data, canvasConnected = false, lastSyncedAt = null }) {
+function flattenBucket(courses, bucket) {
+  return courses
+    .flatMap((c) => c[bucket] ?? [])
+    .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
+}
+
+function matchesSearch(text, q) {
+  return text?.toLowerCase().includes(q);
+}
+
+export function CoursesClient({
+  data,
+  canvasConnected = false,
+  lastSyncedAt = null,
+  initialFilter = "all",
+}) {
   const router = useRouter();
   const { pushUndo } = useUndoStack(() => router.refresh());
   const [name, setName] = useState("");
   const [color, setColor] = useState("#3B82F6");
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState(initialFilter);
+  const [search, setSearch] = useState("");
   const gpa = data.gpa ?? {};
+  const courses = useMemo(() => data.courses ?? [], [data.courses]);
+
+  const buckets = useMemo(
+    () => ({
+      overdue: flattenBucket(courses, "overdue"),
+      due_today: flattenBucket(courses, "due_today"),
+      soon: flattenBucket(courses, "soon"),
+      needs_redo: flattenBucket(courses, "needs_redo"),
+    }),
+    [courses],
+  );
+
+  const filters = [
+    { id: "all", label: "All classes", count: courses.length },
+    { id: "overdue", label: "Overdue", count: buckets.overdue.length },
+    { id: "due_today", label: "Today", count: buckets.due_today.length },
+    { id: "soon", label: "Soon", count: buckets.soon.length },
+    { id: "needs_redo", label: "Redos", count: buckets.needs_redo.length },
+  ];
+
+  const q = search.trim().toLowerCase();
+
+  const visibleCourses = useMemo(() => {
+    if (!q) return courses;
+    return courses.filter(
+      (c) =>
+        matchesSearch(c.name, q) ||
+        [...(c.overdue ?? []), ...(c.due_today ?? []), ...(c.soon ?? []), ...(c.needs_redo ?? [])].some(
+          (a) => matchesSearch(a.title, q),
+        ),
+    );
+  }, [courses, q]);
+
+  const visibleBucketItems = useMemo(() => {
+    if (filter === "all") return [];
+    const items = buckets[filter] ?? [];
+    if (!q) return items;
+    return items.filter(
+      (a) => matchesSearch(a.title, q) || matchesSearch(a.courses?.name, q),
+    );
+  }, [buckets, filter, q]);
 
   async function addCourse(e) {
     e.preventDefault();
@@ -41,6 +102,12 @@ export function CoursesClient({ data, canvasConnected = false, lastSyncedAt = nu
     router.refresh();
   }
 
+  const emptyByFilter = {
+    overdue: "Nothing overdue — you're caught up.",
+    due_today: "Nothing due today.",
+    soon: "Nothing due in the next 48 hours.",
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -64,37 +131,67 @@ export function CoursesClient({ data, canvasConnected = false, lastSyncedAt = nu
 
       <CanvasSyncHint connected={canvasConnected} lastSyncedAt={lastSyncedAt} />
 
-      <form onSubmit={addCourse} className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700">
-        <input
-          className="min-w-[140px] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
-          placeholder="New class name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <input
-          type="color"
-          className="h-10 w-12 cursor-pointer rounded border border-zinc-300 dark:border-zinc-700"
-          value={color}
-          onChange={(e) => setColor(e.target.value)}
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Add class
-        </button>
-        {error ? <p className="w-full text-sm text-red-600">{error}</p> : null}
-      </form>
+      <CourseFilterBar
+        filters={filters}
+        active={filter}
+        onChange={setFilter}
+        search={search}
+        onSearchChange={setSearch}
+      />
 
-      {data.courses?.length ? (
-        <div className="flex flex-col gap-4">
-          {data.courses.map((c) => (
-            <CourseCard key={c.id} course={c} pushUndo={pushUndo} />
-          ))}
-        </div>
+      {filter === "needs_redo" ? (
+        <NeedsRedoPanel
+          items={visibleBucketItems}
+          onRefresh={() => router.refresh()}
+          pushUndo={pushUndo}
+        />
+      ) : filter !== "all" ? (
+        <FilteredWorkList
+          items={visibleBucketItems}
+          emptyText={q ? "No matches for your search." : emptyByFilter[filter]}
+          pushUndo={pushUndo}
+        />
       ) : (
-        <p className="text-sm text-zinc-500">Add a class to track grades, due work, and redos.</p>
+        <>
+          <form
+            onSubmit={addCourse}
+            className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-zinc-300 p-3 dark:border-zinc-700"
+          >
+            <input
+              className="min-w-[140px] flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+              placeholder="New class name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <input
+              type="color"
+              className="h-10 w-12 cursor-pointer rounded border border-zinc-300 dark:border-zinc-700"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              aria-label="Class color"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Add class
+            </button>
+            {error ? <p className="w-full text-sm text-red-600">{error}</p> : null}
+          </form>
+
+          {visibleCourses.length ? (
+            <div className="flex flex-col gap-4">
+              {visibleCourses.map((c) => (
+                <CourseCard key={c.id} course={c} pushUndo={pushUndo} />
+              ))}
+            </div>
+          ) : q ? (
+            <p className="text-sm text-zinc-500">No classes or assignments match your search.</p>
+          ) : (
+            <p className="text-sm text-zinc-500">Add a class to track grades, due work, and redos.</p>
+          )}
+        </>
       )}
     </div>
   );

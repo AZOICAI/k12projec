@@ -9,11 +9,6 @@ export function isCanvasOAuthConfigured() {
   );
 }
 
-/** @deprecated use isCanvasOAuthConfigured */
-export function isCanvasConfigured() {
-  return isCanvasOAuthConfigured();
-}
-
 /** User-generated token from Canvas → Settings → New Access Token (beta / solo testing). */
 export function isPersonalCanvasTokenAllowed() {
   return process.env.CANVAS_ALLOW_PERSONAL_TOKEN !== "false";

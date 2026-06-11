@@ -12,9 +12,6 @@ export function isMissingAssignmentColumn(error) {
   return MISSING_COLUMN_MSG.some((s) => msg.includes(s));
 }
 
-/** @deprecated use isMissingAssignmentColumn */
-export const isMissingAssignmentFlagColumn = isMissingAssignmentColumn;
-
 /** DB row → app fields is_redo / is_low_grade. */
 export function normalizeAssignmentRow(row) {
   if (!row) return row;

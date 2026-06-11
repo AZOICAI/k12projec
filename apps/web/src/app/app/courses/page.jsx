@@ -4,7 +4,12 @@ import { CoursesClient } from "@/components/courses/CoursesClient";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function CoursesPage() {
+const VALID_FILTERS = new Set(["all", "overdue", "due_today", "soon", "needs_redo"]);
+
+export default async function CoursesPage({ searchParams }) {
+  const sp = await searchParams;
+  const initialFilter = VALID_FILTERS.has(sp?.filter) ? sp.filter : "all";
+
   let data = null;
   let loadError = null;
   let canvasConnected = false;
@@ -41,6 +46,7 @@ export default async function CoursesPage() {
           data={data}
           canvasConnected={canvasConnected}
           lastSyncedAt={lastSyncedAt}
+          initialFilter={initialFilter}
         />
       ) : (
         <p className="text-sm text-zinc-500">Sign in to see your classes.</p>

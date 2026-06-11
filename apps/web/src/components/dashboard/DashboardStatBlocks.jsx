@@ -54,14 +54,14 @@ export function DashboardStatBlocks({ summary }) {
         label="Overdue"
         count={summary.overdue_count ?? 0}
         tone="red"
-        href="/app/courses"
+        href="/app/courses?filter=overdue"
         preview={previewTitles(b.overdue)}
       />
       <StatBlock
         label="Due today"
         count={summary.due_today_count ?? 0}
         tone="amber"
-        href="/app/courses"
+        href="/app/courses?filter=due_today"
         preview={previewTitles(b.due_today)}
       />
       <StatBlock
@@ -69,7 +69,7 @@ export function DashboardStatBlocks({ summary }) {
         count={summary.soon_due_count ?? 0}
         hint="Next 48 hours"
         tone="blue"
-        href="/app/courses"
+        href="/app/courses?filter=soon"
         preview={previewTitles(b.soon)}
       />
       <StatBlock
@@ -77,7 +77,7 @@ export function DashboardStatBlocks({ summary }) {
         count={summary.needs_redo_count ?? 0}
         hint="Low scores — fix on Courses"
         tone="violet"
-        href="/app/courses"
+        href="/app/courses?filter=needs_redo"
       />
       <StatBlock
         label="Study hours"
