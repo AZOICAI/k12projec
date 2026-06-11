@@ -2,7 +2,7 @@
  * Real LLM backend for the study tutor.
  *
  * Provider is picked from env (first key found wins):
- *   GEMINI_API_KEY  — Google AI Studio (free tier), default model gemini-2.0-flash
+ *   GEMINI_API_KEY  — Google AI Studio (free tier), default model gemini-flash-latest
  *   GROQ_API_KEY    — Groq (free tier), default model llama-3.3-70b-versatile
  *   OPENAI_API_KEY  — OpenAI, default model gpt-4o-mini
  * Override the model with TUTOR_MODEL.
@@ -15,6 +15,7 @@ Rules:
 - Help the student understand and make progress, step by step.
 - Never write a full essay, full paragraph-for-submission, or hand over a final answer they can copy in. If asked, explain you can't do that, then help them get there themselves.
 - Be encouraging and concrete. Keep replies under ~150 words unless the student asks for more depth.
+- Write in plain text only — no markdown, no asterisks, no headers. Use simple numbered lists when listing steps.
 - If an assignment is provided, ground your help in it. If something is unclear, ask one clarifying question.`;
 
 function buildMessages(assignmentText, history, message) {
@@ -79,7 +80,9 @@ async function callGemini({ apiKey, model, messages }) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents,
-        generationConfig: { maxOutputTokens: 500, temperature: 0.7 },
+        // Gemini "thinking" models spend output tokens on internal reasoning
+        // before the visible reply, so the budget needs generous headroom.
+        generationConfig: { maxOutputTokens: 3000, temperature: 0.7 },
       }),
     },
   );
@@ -113,7 +116,7 @@ export async function generateTutorReply({ assignmentText, history, message }) {
   if (process.env.GEMINI_API_KEY) {
     return callGemini({
       apiKey: process.env.GEMINI_API_KEY,
-      model: process.env.TUTOR_MODEL || "gemini-2.0-flash",
+      model: process.env.TUTOR_MODEL || "gemini-flash-latest",
       messages,
     });
   }
