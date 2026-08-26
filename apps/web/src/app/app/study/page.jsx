@@ -18,6 +18,15 @@ export default function StudyPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [timerTitle, setTimerTitle] = useState("Focused study");
+  const [timerMinutes, setTimerMinutes] = useState(25);
+  const [timerCourseId, setTimerCourseId] = useState("");
+  const [timerAssignmentId, setTimerAssignmentId] = useState("");
+  const [timerStartedAt, setTimerStartedAt] = useState(null);
+  const [timerDurationMs, setTimerDurationMs] = useState(25 * 60 * 1000);
+  const [timerRemainingMs, setTimerRemainingMs] = useState(25 * 60 * 1000);
+  const [timerRunning, setTimerRunning] = useState(false);
+
   const sorted = useMemo(
     () => [...blocks].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
     [blocks],
@@ -62,12 +71,63 @@ export default function StudyPage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    if (!timerRunning || !timerStartedAt) return;
+
+    const intervalId = window.setInterval(() => {
+      const now = Date.now();
+      const remaining = Math.max(0, timerDurationMs - (now - timerStartedAt));
+      setTimerRemainingMs(remaining);
+
+      if (remaining <= 0) {
+        window.clearInterval(intervalId);
+        setTimerRunning(false);
+        void completeTimer();
+      }
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [timerRunning, timerStartedAt, timerDurationMs]);
+
   function saveRoutine() {
     if (!title || !startsLocal || !endsLocal) return;
 
     const routine = { title, startsLocal, endsLocal, courseId, assignmentId };
     setSavedRoutine(routine);
     window.localStorage.setItem(weeklyRoutineKey, JSON.stringify(routine));
+  }
+
+  async function completeTimer() {
+    if (!timerStartedAt) return;
+
+    const start = new Date(timerStartedAt);
+    const end = new Date();
+
+    const res = await fetch(apiPaths.studyBlocks, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: timerTitle.trim() || "Focused study",
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
+        course_id: timerCourseId || null,
+        assignment_id: timerAssignmentId || null,
+      }),
+    });
+
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+
+    setTimerStartedAt(null);
+    setTimerDurationMs(25 * 60 * 1000);
+    setTimerRemainingMs(25 * 60 * 1000);
+    setTimerRunning(false);
+    setTimerCourseId("");
+    setTimerAssignmentId("");
+    await load();
   }
 
   async function applyRoutine() {
@@ -145,6 +205,22 @@ export default function StudyPage() {
     await load();
   }
 
+  function startTimer() {
+    const safeTitle = timerTitle.trim() || "Focused study";
+    const start = Date.now();
+    const durationMs = Math.max(1, Number(timerMinutes || 25)) * 60 * 1000;
+    setTimerTitle(safeTitle);
+    setTimerStartedAt(start);
+    setTimerDurationMs(durationMs);
+    setTimerRemainingMs(durationMs);
+    setTimerRunning(true);
+  }
+
+  function pauseTimer() {
+    setTimerRunning(false);
+    setTimerDurationMs(Math.max(1, timerRemainingMs));
+  }
+
   async function remove(id) {
     setError(null);
     const res = await fetch(apiPaths.studyBlock(id), { method: "DELETE", credentials: "include" });
@@ -154,6 +230,8 @@ export default function StudyPage() {
     }
     await load();
   }
+
+  const formattedRemaining = new Date(timerRemainingMs).toISOString().slice(14, 19);
 
   return (
     <div className="flex flex-col gap-8">
@@ -169,6 +247,79 @@ export default function StudyPage() {
           {error}
         </p>
       ) : null}
+
+      <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="flex-1 space-y-3">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium">Session title</span>
+              <input
+                value={timerTitle}
+                onChange={(e) => setTimerTitle(e.target.value)}
+                className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Minutes</span>
+                <input
+                  type="number"
+                  min={5}
+                  step={5}
+                  value={timerMinutes}
+                  onChange={(e) => setTimerMinutes(Number(e.target.value || 25))}
+                  className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Course</span>
+                <select
+                  value={timerCourseId}
+                  onChange={(e) => setTimerCourseId(e.target.value)}
+                  className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <option value="">None</option>
+                  {courses.map((course) => (
+                    <option key={course.id} value={course.id}>{course.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Assignment</span>
+                <select
+                  value={timerAssignmentId}
+                  onChange={(e) => setTimerAssignmentId(e.target.value)}
+                  className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+                >
+                  <option value="">None</option>
+                  {assignments.map((assignment) => (
+                    <option key={assignment.id} value={assignment.id}>{assignment.title}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-center dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="text-4xl font-bold tracking-tight">{formattedRemaining}</div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">Focus timer</div>
+            <div className="flex gap-2">
+              {!timerRunning ? (
+                <button type="button" onClick={startTimer} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+                  Start
+                </button>
+              ) : (
+                <button type="button" onClick={pauseTimer} className="rounded-lg border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800">
+                  Pause
+                </button>
+              )}
+              <button type="button" onClick={() => void completeTimer()} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+                Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -248,9 +399,8 @@ export default function StudyPage() {
             >
               <option value="">—</option>
               {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
+                <option key={c.id} value={c.id}
+                  >{c.name}</option>
               ))}
             </select>
           </label>

@@ -23,6 +23,12 @@ function addDays(d, n) {
 export default function CalendarPage() {
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
   const [assignments, setAssignments] = useState([]);
+  const [studyBlocks, setStudyBlocks] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [title, setTitle] = useState("");
+  const [startsLocal, setStartsLocal] = useState("");
+  const [endsLocal, setEndsLocal] = useState("");
+  const [courseId, setCourseId] = useState("");
   const [error, setError] = useState(null);
 
   const weekEnd = useMemo(() => {
@@ -41,31 +47,77 @@ export default function CalendarPage() {
       const key = day.toDateString();
       map[key] = [];
     }
-    for (const a of assignments) {
-      const due = new Date(a.due_at);
+
+    for (const item of assignments) {
+      const due = new Date(item.due_at);
       const key = new Date(due.getFullYear(), due.getMonth(), due.getDate()).toDateString();
       if (!map[key]) map[key] = [];
-      map[key].push(a);
+      map[key].push({ ...item, itemType: "assignment" });
     }
+
+    for (const block of studyBlocks) {
+      const dayStart = new Date(block.starts_at);
+      const key = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate()).toDateString();
+      if (!map[key]) map[key] = [];
+      map[key].push({ ...block, itemType: "study" });
+    }
+
     return map;
-  }, [assignments, days]);
+  }, [assignments, studyBlocks, days]);
 
   const load = useCallback(async () => {
     setError(null);
     const from = weekStart.toISOString();
     const to = weekEnd.toISOString();
     const q = new URLSearchParams({ from, to });
-    const res = await fetch(`${apiPaths.assignments}?${q}`, { credentials: "include" });
-    if (!res.ok) {
-      setError(await res.text());
+    const [aRes, sRes, cRes] = await Promise.all([
+      fetch(`${apiPaths.assignments}?${q}`, { credentials: "include" }),
+      fetch(`${apiPaths.studyBlocks}?${q}`, { credentials: "include" }),
+      fetch(apiPaths.courses, { credentials: "include" }),
+    ]);
+
+    if (!aRes.ok || !sRes.ok || !cRes.ok) {
+      const problem = !aRes.ok ? aRes : !sRes.ok ? sRes : cRes;
+      setError(await problem.text());
       return;
     }
-    setAssignments(await res.json());
+
+    setAssignments(await aRes.json());
+    setStudyBlocks(await sRes.json());
+    setCourses(await cRes.json());
   }, [weekStart, weekEnd]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function addStudyBlock(e) {
+    e.preventDefault();
+    if (!title || !startsLocal || !endsLocal) return;
+
+    const res = await fetch(apiPaths.studyBlocks, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        starts_at: new Date(startsLocal).toISOString(),
+        ends_at: new Date(endsLocal).toISOString(),
+        course_id: courseId || null,
+      }),
+    });
+
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+
+    setTitle("");
+    setStartsLocal("");
+    setEndsLocal("");
+    setCourseId("");
+    await load();
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,7 +125,7 @@ export default function CalendarPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Week view of what is due. Use arrows to move between weeks.
+            Week view of assignments and study blocks. New study entries appear here automatically.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -107,6 +159,59 @@ export default function CalendarPage() {
         </p>
       ) : null}
 
+      <form onSubmit={addStudyBlock} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="grid gap-3 md:grid-cols-5">
+          <label className="flex flex-col gap-1 text-sm md:col-span-2">
+            <span className="font-medium">Study block name</span>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              placeholder="Algebra review"
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Starts</span>
+            <input
+              type="datetime-local"
+              value={startsLocal}
+              onChange={(e) => setStartsLocal(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Ends</span>
+            <input
+              type="datetime-local"
+              value={endsLocal}
+              onChange={(e) => setEndsLocal(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Course</span>
+            <select
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              <option value="">None</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>{course.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="mt-3 flex justify-end">
+          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Add to calendar
+          </button>
+        </div>
+      </form>
+
       <div className="grid gap-3 md:grid-cols-7">
         {days.map((day, i) => {
           const key = day.toDateString();
@@ -119,21 +224,27 @@ export default function CalendarPage() {
               <div className="text-xs font-semibold uppercase text-zinc-500">{WEEKDAYS[i]}</div>
               <div className="text-sm font-medium">{day.toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
               <ul className="mt-2 flex flex-1 flex-col gap-2 text-xs">
-                {items.map((a) => (
-                  <li
-                    key={a.id}
-                    className="rounded-md border border-zinc-100 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900/60"
-                  >
-                    <div className="font-medium leading-snug">{a.title}</div>
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: a.courses?.color ?? "#3B82F6" }}
-                      />
-                      {new Date(a.due_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
-                    </div>
-                  </li>
-                ))}
+                {items.map((entry) => {
+                  const isStudy = entry.itemType === "study";
+                  const timeValue = isStudy ? new Date(entry.starts_at) : new Date(entry.due_at);
+                  const color = isStudy ? "#8b5cf6" : entry.courses?.color ?? "#3B82F6";
+
+                  return (
+                    <li
+                      key={`${entry.itemType}-${entry.id}`}
+                      className="rounded-md border border-zinc-100 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900/60"
+                    >
+                      <div className="font-medium leading-snug">{entry.title}</div>
+                      <div className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+                        {isStudy ? "Study block" : "Assignment"}
+                      </div>
+                      <div className="mt-1 text-[10px] text-zinc-500">
+                        {timeValue.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           );
