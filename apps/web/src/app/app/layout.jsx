@@ -52,9 +52,6 @@ export default async function AppLayout({ children }) {
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/study">
                 Study
               </Link>
-              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/game">
-                Game
-              </Link>
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/progress">
                 Progress
               </Link>

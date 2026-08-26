@@ -2,6 +2,7 @@
 
 import { apiPaths } from "@k12/shared";
 import { useEffect, useMemo, useState } from "react";
+import { filterRecentCourses } from "@/lib/progress";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -24,14 +25,10 @@ export default function CoursesPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const visibleCourses = useMemo(
-    () => {
-      if (showAll) return courses;
-      const recentCutoff = Date.now() - 1000 * 60 * 60 * 24 * 365 * 2;
-      return courses.filter((course) => new Date(course.created_at).getTime() >= recentCutoff || !course.created_at);
-    },
-    [courses, showAll],
-  );
+  const visibleCourses = useMemo(() => {
+    if (showAll) return courses;
+    return filterRecentCourses(courses);
+  }, [courses, showAll]);
 
   async function load() {
     setError(null);

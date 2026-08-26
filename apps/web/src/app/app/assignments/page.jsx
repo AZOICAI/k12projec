@@ -2,6 +2,7 @@
 
 import { apiPaths } from "@k12/shared";
 import { useEffect, useMemo, useState } from "react";
+import { filterRecentAssignments } from "@/lib/progress";
 
 const STATUS_OPTIONS = [
   { value: "todo", label: "To do" },
@@ -24,14 +25,7 @@ export default function AssignmentsPage() {
   const [loading, setLoading] = useState(true);
 
   const sorted = useMemo(() => {
-    const visible = showAll
-      ? assignments
-      : assignments.filter((assignment) => {
-          if (!assignment.due_at) return true;
-          const dueTime = new Date(assignment.due_at).getTime();
-          const cutoff = Date.now() - 1000 * 60 * 60 * 24 * 365 * 2;
-          return dueTime >= cutoff;
-        });
+    const visible = showAll ? assignments : filterRecentAssignments(assignments);
 
     return [...visible].sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime());
   }, [assignments, showAll]);

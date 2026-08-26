@@ -6,6 +6,36 @@ export const progressTiers = [
   { id: "legend", name: "Legend", minPoints: 2200, maxPoints: Infinity, color: "#8b5cf6", glow: "from-violet-500/30 to-fuchsia-200/10" },
 ];
 
+const RECENT_ACTIVITY_MS = 1000 * 60 * 60 * 24 * 365 * 2;
+
+export function isRecentActivity(dateValue) {
+  if (!dateValue) return true;
+
+  const timestamp = new Date(dateValue).getTime();
+  if (Number.isNaN(timestamp)) return true;
+
+  return Date.now() - timestamp <= RECENT_ACTIVITY_MS;
+}
+
+export function isActiveAssignment(assignment) {
+  if (!assignment) return false;
+  if (assignment.status === "done") return false;
+  if (!assignment.due_at) return false;
+  if (!isRecentActivity(assignment.due_at)) return false;
+  return true;
+}
+
+export function filterRecentAssignments(assignments = []) {
+  return assignments.filter((assignment) => isActiveAssignment(assignment));
+}
+
+export function filterRecentCourses(courses = []) {
+  return courses.filter((course) => {
+    if (!course?.created_at) return true;
+    return isRecentActivity(course.created_at);
+  });
+}
+
 export const datxGraduationRequirements = [
   { label: "English", required: 4, completed: 3, note: "English I, II, III, IV" },
   { label: "Math", required: 3, completed: 2, note: "Algebra I, Geometry, plus 1 additional credit" },
@@ -18,17 +48,6 @@ export const datxGraduationRequirements = [
   { label: "State Electives", required: 3, completed: 2, note: "Academic electives" },
   { label: "Local Electives", required: 3, completed: 2, note: "Additional local credits" },
 ];
-
-const RECENT_ACTIVITY_MS = 1000 * 60 * 60 * 24 * 365 * 2;
-
-export function isRecentActivity(dateValue) {
-  if (!dateValue) return true;
-
-  const timestamp = new Date(dateValue).getTime();
-  if (Number.isNaN(timestamp)) return true;
-
-  return Date.now() - timestamp <= RECENT_ACTIVITY_MS;
-}
 
 export function getCompletedCourseCredits(completedCourses = []) {
   return completedCourses.reduce((total, course) => total + Number(course.credits || 0), 0);

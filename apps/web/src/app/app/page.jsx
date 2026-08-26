@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { apiPaths } from "@k12/shared";
 import { serverApi } from "@/lib/server-api";
-import { getDatxGraduationProgress } from "@/lib/progress";
+import { filterRecentAssignments, getDatxGraduationProgress } from "@/lib/progress";
 
 function weekBounds() {
   const now = new Date();
@@ -53,24 +53,25 @@ export default async function DashboardPage() {
     loadError = e instanceof Error ? e.message : "Failed to load dashboard.";
   }
 
+  const relevantAssignments = filterRecentAssignments(assignments);
   const now = Date.now();
-  const totalThisWeek = assignments.length;
-  const doneThisWeek = assignments.filter((row) => row.status === "done").length;
-  const dueToday = assignments.filter((row) => row.status !== "done" && row.due_at && isSameDay(row.due_at, new Date())).length;
-  const overdue = assignments.filter((row) => row.status !== "done" && row.due_at && new Date(row.due_at).getTime() < now).length;
-  const dueSoon = assignments.filter((row) => {
+  const totalThisWeek = relevantAssignments.length;
+  const doneThisWeek = relevantAssignments.filter((row) => row.status === "done").length;
+  const dueToday = relevantAssignments.filter((row) => row.status !== "done" && row.due_at && isSameDay(row.due_at, new Date())).length;
+  const overdue = relevantAssignments.filter((row) => row.status !== "done" && row.due_at && new Date(row.due_at).getTime() < now).length;
+  const dueSoon = relevantAssignments.filter((row) => {
     if (row.status === "done" || !row.due_at) return false;
     const dueAt = new Date(row.due_at).getTime();
     if (dueAt < now) return false;
     const hoursUntil = (dueAt - now) / (1000 * 60 * 60);
     return hoursUntil <= 48 && hoursUntil > 0 && !isSameDay(row.due_at, new Date());
   }).length;
-  const needsRedo = assignments.filter((row) => ["redo", "low_grade"].includes(row.status)).length;
+  const needsRedo = relevantAssignments.filter((row) => ["redo", "low_grade"].includes(row.status)).length;
   const studyHours = getStudyHours(studyBlocks);
   const graduation = getDatxGraduationProgress();
   const completionRatio = totalThisWeek ? (doneThisWeek / totalThisWeek) * 100 : 0;
 
-  const thisWeekAssignments = [...assignments]
+  const thisWeekAssignments = [...relevantAssignments]
     .filter((row) => row.due_at)
     .sort((a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime())
     .slice(0, 6);
