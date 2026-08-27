@@ -17,7 +17,7 @@ export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState([]);
   const [showAll, setShowAll] = useState(false);
   const [title, setTitle] = useState("");
-  const [courseId, setCourseId] = useState("");
+  const [courseName, setCourseName] = useState("");
   const [dueLocal, setDueLocal] = useState("");
   const [notes, setNotes] = useState("");
   const [estimate, setEstimate] = useState("");
@@ -57,15 +57,59 @@ export default function AssignmentsPage() {
   }, []);
 
   useEffect(() => {
-    if (courses.length && !courseId) {
-      setCourseId(courses[0].id);
+    if (courses.length && !courseName) {
+      setCourseName(courses[0]?.name ?? "");
     }
-  }, [courses, courseId]);
+  }, [courses, courseName]);
+
+  async function resolveCourseId() {
+    const trimmed = courseName.trim();
+    if (!trimmed) return null;
+
+    const existing = courses.find((course) => course.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing.id;
+
+    const res = await fetch(apiPaths.courses, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: trimmed,
+        color: "#60a5fa",
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const created = await res.json();
+    setCourses((current) => [...current, created]);
+    return created.id;
+  }
 
   async function addAssignment(e) {
     e.preventDefault();
-    if (!courseId) return;
+    const trimmedCourse = courseName.trim();
+    if (!trimmedCourse) {
+      setError("Add a course name before scheduling the assignment.");
+      return;
+    }
     setError(null);
+
+    let courseId;
+    try {
+      courseId = await resolveCourseId();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to save the course.");
+      return;
+    }
+
+    if (!courseId) {
+      setError("A course is required for the assignment.");
+      return;
+    }
+
     const due_at = new Date(dueLocal).toISOString();
     const res = await fetch(apiPaths.assignments, {
       method: "POST",
@@ -84,8 +128,10 @@ export default function AssignmentsPage() {
       return;
     }
     setTitle("");
+    setCourseName("");
     setNotes("");
     setEstimate("");
+    setDueLocal("");
     await load();
   }
 
@@ -158,18 +204,13 @@ export default function AssignmentsPage() {
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Course</span>
-            <select
+            <input
               className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              placeholder="Type a class name"
               required
-            >
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Due</span>
@@ -249,9 +290,14 @@ export default function AssignmentsPage() {
                     </select>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => void remove(a.id)}>
-                      Delete
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button type="button" className="text-xs font-medium text-emerald-600 hover:underline" onClick={() => void patchStatus(a.id, "done")}>
+                        Complete
+                      </button>
+                      <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => void remove(a.id)}>
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

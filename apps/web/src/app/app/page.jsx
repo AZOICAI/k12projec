@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiPaths } from "@k12/shared";
 import { serverApi } from "@/lib/server-api";
+import RankUpDetector from "@/components/RankUpDetector";
 
 const rankLevels = [
   { name: "Bronze I", short: "B1", minXp: 0, maxXp: 99, color: "#b97746", accent: "from-amber-500/30 to-orange-500/10", icon: "🥉" },
@@ -27,6 +28,7 @@ const badgeList = [
 
 function getStudyMinutes(studyBlocks = []) {
   return studyBlocks.reduce((total, block) => {
+    if (!block.is_complete) return total;
     const startsAt = new Date(block.starts_at).getTime();
     const endsAt = new Date(block.ends_at).getTime();
     return total + Math.max(0, (endsAt - startsAt) / (1000 * 60));
@@ -62,7 +64,7 @@ export default async function DashboardPage() {
   const totalXp = Math.round(studyMinutes + assignmentXp);
 
   const currentRank = [...rankLevels].reverse().find((rank) => totalXp >= rank.minXp) ?? rankLevels[0];
-  const nextRank = rankLevels.find((rank) => totalXp < rank.maxXp) ?? null;
+  const nextRank = rankLevels.find((rank) => totalXp < rank.minXp) ?? null;
   const currentRange = Math.max(1, currentRank.maxXp - currentRank.minXp);
   const progressInCurrentRank = clampPercent(((totalXp - currentRank.minXp) / currentRange) * 100);
   const xpToNextRank = nextRank ? Math.max(0, nextRank.minXp - totalXp) : 0;
@@ -73,6 +75,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6 text-zinc-50">
+      <RankUpDetector />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-300">Progress hub</p>
@@ -133,8 +136,8 @@ export default async function DashboardPage() {
             </div>
 
             <div className="mt-3 flex items-center justify-between text-xs text-zinc-400">
-              <span>{currentRank.minXp} XP</span>
-              <span>{nextRank ? `${nextRank.minXp} XP` : `${totalXp} XP`}</span>
+              <span>{totalXp} XP</span>
+              <span>{nextRank ? `${xpToNextRank} XP needed` : "Maxed out!"}</span>
             </div>
           </div>
 

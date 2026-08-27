@@ -2,6 +2,8 @@
 
 import { apiPaths } from "@k12/shared";
 import { useEffect, useMemo, useState } from "react";
+import { checkRankUp, updateStoredRank } from "@/lib/xp";
+import RankUpPopup from "@/components/RankUpPopup";
 
 const weeklyRoutineKey = "k12-weekly-routine";
 const dayNames = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -46,11 +48,13 @@ export default function StudyPage() {
   const [itemTitle, setItemTitle] = useState("");
   const [itemStartsLocal, setItemStartsLocal] = useState("09:00");
   const [itemEndsLocal, setItemEndsLocal] = useState("10:00");
+  const [itemCourseName, setItemCourseName] = useState("");
   const [itemCourseId, setItemCourseId] = useState("");
   const [itemAssignmentId, setItemAssignmentId] = useState("");
 
   const [timerTitle, setTimerTitle] = useState("Focused study");
   const [timerMinutes, setTimerMinutes] = useState(25);
+  const [timerCourseName, setTimerCourseName] = useState("");
   const [timerCourseId, setTimerCourseId] = useState("");
   const [timerAssignmentId, setTimerAssignmentId] = useState("");
   const [timerStudyBlockId, setTimerStudyBlockId] = useState(null);
@@ -58,6 +62,8 @@ export default function StudyPage() {
   const [timerEndAt, setTimerEndAt] = useState(null);
   const [timerRemainingMs, setTimerRemainingMs] = useState(25 * 60 * 1000);
   const [timerRunning, setTimerRunning] = useState(false);
+
+  const [rankUpRank, setRankUpRank] = useState(null);
 
   const sorted = useMemo(
     () => [...blocks].sort((a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()),
@@ -102,6 +108,7 @@ export default function StudyPage() {
     }
 
     void load();
+    void updateStoredRank();
   }, []);
 
   function playAlarm() {
@@ -192,6 +199,32 @@ export default function StudyPage() {
     window.localStorage.setItem(weeklyRoutineKey, JSON.stringify(normalized));
   }
 
+  async function resolveCourseId(courseNameValue) {
+    const trimmed = String(courseNameValue ?? "").trim();
+    if (!trimmed) return null;
+
+    const existing = courses.find((course) => course.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing.id;
+
+    const res = await fetch(apiPaths.courses, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: trimmed,
+        color: "#60a5fa",
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+
+    const created = await res.json();
+    setCourses((current) => [...current, created]);
+    return created.id;
+  }
+
   async function createStudyBlockFromTimer({ title, startsAt, endsAt, courseId, assignmentId }) {
     const payload = {
       title: title.trim() || "Focused study",
@@ -242,6 +275,7 @@ export default function StudyPage() {
       startsLocal: itemStartsLocal,
       endsLocal: itemEndsLocal,
       courseId: itemCourseId || null,
+      courseName: itemCourseName.trim(),
       assignmentId: itemAssignmentId || null,
     };
 
@@ -266,8 +300,12 @@ export default function StudyPage() {
 
     if (!Number.isNaN(resolvedStart.getTime()) && !Number.isNaN(resolvedEnd.getTime()) && resolvedEnd > resolvedStart) {
       const now = Date.now();
+      let storedCourseId = nextItem.courseId;
+      if (!storedCourseId && nextItem.courseName) {
+        storedCourseId = await resolveCourseId(nextItem.courseName);
+      }
       setTimerTitle(nextItem.title);
-      setTimerCourseId(nextItem.courseId || "");
+      setTimerCourseId(storedCourseId || "");
       setTimerAssignmentId(nextItem.assignmentId || "");
       setTimerStudyBlockId(null);
       setTimerStartAt(resolvedStart.getTime());
@@ -278,7 +316,7 @@ export default function StudyPage() {
         title: nextItem.title,
         startsAt: resolvedStart,
         endsAt: resolvedEnd,
-        courseId: nextItem.courseId,
+        courseId: storedCourseId,
         assignmentId: nextItem.assignmentId,
       });
     }
@@ -286,6 +324,7 @@ export default function StudyPage() {
     setItemTitle("");
     setItemStartsLocal("09:00");
     setItemEndsLocal("10:00");
+    setItemCourseName("");
     setItemCourseId("");
     setItemAssignmentId("");
   }
@@ -342,6 +381,8 @@ export default function StudyPage() {
     setTimerAssignmentId("");
     playAlarm();
     await load();
+    const newRank = await checkRankUp();
+    if (newRank) setRankUpRank(newRank);
   }
 
   async function applyRoutine() {
@@ -406,13 +447,23 @@ export default function StudyPage() {
     await load();
   }
 
-  function startTimer() {
+  async function startTimer() {
     const safeTitle = timerTitle.trim() || "Focused study";
     const durationMs = Math.max(5, Number(timerMinutes) || 25) * 60 * 1000;
     const start = Date.now();
     const end = start + durationMs;
 
+    let resolvedCourseId = timerCourseId;
+    if (!resolvedCourseId && timerCourseName.trim()) {
+      try {
+        resolvedCourseId = await resolveCourseId(timerCourseName);
+      } catch {
+        resolvedCourseId = null;
+      }
+    }
+
     setTimerTitle(safeTitle);
+    setTimerCourseId(resolvedCourseId || "");
     setTimerStartAt(start);
     setTimerEndAt(end);
     setTimerRemainingMs(durationMs);
@@ -480,16 +531,12 @@ export default function StudyPage() {
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium">Course</span>
-                <select
-                  value={timerCourseId}
-                  onChange={(e) => setTimerCourseId(e.target.value)}
+                <input
+                  value={timerCourseName}
+                  onChange={(e) => setTimerCourseName(e.target.value)}
+                  placeholder="Type a course name"
                   className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-                >
-                  <option value="">None</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>{course.name}</option>
-                  ))}
-                </select>
+                />
               </label>
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-medium">Assignment</span>
@@ -632,16 +679,12 @@ export default function StudyPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Course (optional)</span>
-            <select
+            <input
               className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              value={itemCourseId}
-              onChange={(e) => setItemCourseId(e.target.value)}
-            >
-              <option value="">—</option>
-              {courses.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              value={itemCourseName}
+              onChange={(e) => setItemCourseName(e.target.value)}
+              placeholder="Type a course name"
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Assignment (optional)</span>
@@ -676,14 +719,26 @@ export default function StudyPage() {
                 <div className="text-zinc-600 dark:text-zinc-400">
                   {new Date(b.starts_at).toLocaleString()} – {new Date(b.ends_at).toLocaleString()}
                 </div>
+                {b.is_complete ? (
+                  <span className="mt-1 inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">Complete</span>
+                ) : null}
               </div>
-              <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => void remove(b.id)}>
-                Delete
-              </button>
+              <div className="flex items-center gap-2">
+                {!b.is_complete ? (
+                  <button type="button" className="text-xs font-medium text-emerald-600 hover:underline" onClick={() => void markStudyBlockComplete(b.id)}>
+                    Complete
+                  </button>
+                ) : null}
+                <button type="button" className="text-xs text-red-600 hover:underline" onClick={() => void remove(b.id)}>
+                  Delete
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       )}
+
+      {rankUpRank ? <RankUpPopup rank={rankUpRank} onDismiss={() => setRankUpRank(null)} /> : null}
     </div>
   );
 }

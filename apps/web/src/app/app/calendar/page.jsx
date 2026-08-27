@@ -2,6 +2,8 @@
 
 import { apiPaths } from "@k12/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { checkRankUp, updateStoredRank } from "@/lib/xp";
+import RankUpPopup from "@/components/RankUpPopup";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -26,7 +28,7 @@ export default function CalendarPage() {
   const [studyBlocks, setStudyBlocks] = useState([]);
   const [courses, setCourses] = useState([]);
   const [assignmentTitle, setAssignmentTitle] = useState("");
-  const [assignmentCourseId, setAssignmentCourseId] = useState("");
+  const [assignmentCourseName, setAssignmentCourseName] = useState("");
   const [assignmentDueLocal, setAssignmentDueLocal] = useState("");
   const [assignmentNotes, setAssignmentNotes] = useState("");
   const [studyTitle, setStudyTitle] = useState("");
@@ -34,6 +36,7 @@ export default function CalendarPage() {
   const [endsLocal, setEndsLocal] = useState("");
   const [courseId, setCourseId] = useState("");
   const [error, setError] = useState(null);
+  const [rankUpRank, setRankUpRank] = useState(null);
 
   const weekEnd = useMemo(() => {
     const end = addDays(weekStart, 6);
@@ -89,25 +92,50 @@ export default function CalendarPage() {
     setAssignments(await aRes.json());
     setStudyBlocks(await sRes.json());
     setCourses(await cRes.json());
-    if (!assignmentCourseId && courses.length) {
-      setAssignmentCourseId(courses[0].id);
-    }
-  }, [assignmentCourseId, courses.length, weekStart, weekEnd]);
+  }, [weekStart, weekEnd]);
 
   useEffect(() => {
     void load();
+    void updateStoredRank();
   }, [load]);
+
+  async function resolveCourseId(courseNameValue) {
+    const trimmed = String(courseNameValue ?? "").trim();
+    if (!trimmed) return null;
+
+    const existing = courses.find((course) => course.name.toLowerCase() === trimmed.toLowerCase());
+    if (existing) return existing.id;
+
+    const res = await fetch(apiPaths.courses, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed, color: "#60a5fa" }),
+    });
+
+    if (!res.ok) throw new Error(await res.text());
+
+    const created = await res.json();
+    setCourses((current) => [...current, created]);
+    return created.id;
+  }
 
   async function addAssignment(e) {
     e.preventDefault();
     if (!assignmentTitle || !assignmentDueLocal) return;
+
+    const courseId = await resolveCourseId(assignmentCourseName);
+    if (!courseId) {
+      setError("Enter a course name for this assignment.");
+      return;
+    }
 
     const res = await fetch(apiPaths.assignments, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        course_id: assignmentCourseId || courses[0]?.id || null,
+        course_id: courseId,
         title: assignmentTitle,
         due_at: new Date(assignmentDueLocal).toISOString(),
         notes: assignmentNotes || null,
@@ -120,7 +148,7 @@ export default function CalendarPage() {
     }
 
     setAssignmentTitle("");
-    setAssignmentCourseId(courses[0]?.id || "");
+    setAssignmentCourseName("");
     setAssignmentDueLocal("");
     setAssignmentNotes("");
     await load();
@@ -142,6 +170,43 @@ export default function CalendarPage() {
       return;
     }
     await load();
+  }
+
+  async function completeAssignment(id) {
+    setError(null);
+    const res = await fetch(apiPaths.assignment(id), {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "done" }),
+    });
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+    await load();
+    const rankUp = await checkRankUp();
+    if (rankUp) setRankUpRank(rankUp);
+  }
+
+  async function completeStudyBlock(id) {
+    setError(null);
+    const res = await fetch(apiPaths.studyBlock(id), {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_complete: true,
+        completed_at: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+    await load();
+    const rankUp = await checkRankUp();
+    if (rankUp) setRankUpRank(rankUp);
   }
 
   return (
@@ -204,29 +269,53 @@ export default function CalendarPage() {
                   return (
                     <li
                       key={`${entry.itemType}-${entry.id}`}
-                      className="rounded-md border border-zinc-100 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900/60"
+                      className={`rounded-md border p-2 dark:border-zinc-800 ${
+                        entry.is_complete || entry.status === "done"
+                          ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900"
+                          : "bg-zinc-50 dark:bg-zinc-900/60 border-zinc-100"
+                      }`}
                     >
                       <div className="font-medium leading-snug">{entry.title}</div>
                       <div className="mt-1 flex items-center gap-1 text-[10px] text-zinc-500">
                         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
                         {isStudy ? "Study block" : "Assignment"}
+                        {entry.is_complete || entry.status === "done" ? (
+                          <span className="ml-1 rounded bg-emerald-200 px-1.5 py-0.5 text-[9px] font-medium text-emerald-800 dark:bg-emerald-800 dark:text-emerald-200">Done</span>
+                        ) : null}
                       </div>
                       <div className="mt-1 text-[10px] text-zinc-500">
                         {timeValue.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                       </div>
-                      <button
-                        type="button"
-                        className="mt-2 text-[10px] font-medium text-red-600 hover:underline"
-                        onClick={() => {
-                          if (isStudy) {
-                            void removeStudyBlock(entry.id);
-                          } else {
-                            void removeAssignment(entry.id);
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
+                      <div className="mt-2 flex items-center gap-2">
+                        {entry.is_complete || entry.status === "done" ? null : (
+                          <button
+                            type="button"
+                            className="text-[10px] font-medium text-emerald-600 hover:underline"
+                            onClick={() => {
+                              if (isStudy) {
+                                void completeStudyBlock(entry.id);
+                              } else {
+                                void completeAssignment(entry.id);
+                              }
+                            }}
+                          >
+                            Complete
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="text-[10px] font-medium text-red-600 hover:underline"
+                          onClick={() => {
+                            if (isStudy) {
+                              void removeStudyBlock(entry.id);
+                            } else {
+                              void removeAssignment(entry.id);
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </li>
                   );
                 })}
@@ -251,15 +340,13 @@ export default function CalendarPage() {
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Course</span>
-            <select
-              value={assignmentCourseId}
-              onChange={(e) => setAssignmentCourseId(e.target.value)}
+            <input
+              value={assignmentCourseName}
+              onChange={(e) => setAssignmentCourseName(e.target.value)}
+              placeholder="Type a course name"
               className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-            >
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>{course.name}</option>
-              ))}
-            </select>
+              required
+            />
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium">Due</span>
@@ -287,6 +374,8 @@ export default function CalendarPage() {
           </button>
         </div>
       </form>
+
+      {rankUpRank ? <RankUpPopup rank={rankUpRank} onDismiss={() => setRankUpRank(null)} /> : null}
     </div>
   );
 }
