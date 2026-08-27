@@ -45,6 +45,8 @@ export async function POST(request) {
       ends_at: parsed.data.ends_at,
       course_id: parsed.data.course_id ?? null,
       assignment_id: parsed.data.assignment_id ?? null,
+      is_complete: parsed.data.is_complete ?? false,
+      completed_at: parsed.data.completed_at ?? null,
     })
     .select("*")
     .single();

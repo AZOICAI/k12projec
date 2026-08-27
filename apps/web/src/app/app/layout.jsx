@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { clearLocalDevSession, getLocalDevUser } from "@/lib/dev-auth";
 
 async function signOut() {
   "use server";
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  clearLocalDevSession();
   redirect("/login");
 }
 
@@ -23,10 +22,7 @@ function SignOutForm() {
 }
 
 export default async function AppLayout({ children }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = getLocalDevUser();
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-50">
@@ -40,20 +36,11 @@ export default async function AppLayout({ children }) {
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app">
                 Home
               </Link>
-              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/courses">
-                Courses
-              </Link>
-              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/assignments">
-                Assignments
-              </Link>
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/calendar">
                 Calendar
               </Link>
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/study">
                 Study
-              </Link>
-              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/progress">
-                Progress
               </Link>
             </nav>
           </div>

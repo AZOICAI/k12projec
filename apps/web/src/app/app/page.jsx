@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { apiPaths } from "@k12/shared";
 import { serverApi } from "@/lib/server-api";
-import { filterRecentAssignments, getDatxGraduationProgress } from "@/lib/progress";
+import { filterRecentAssignments } from "@/lib/progress";
 
 function weekBounds() {
   const now = new Date();
@@ -59,17 +59,7 @@ export default async function DashboardPage() {
   const doneThisWeek = relevantAssignments.filter((row) => row.status === "done").length;
   const dueToday = relevantAssignments.filter((row) => row.status !== "done" && row.due_at && isSameDay(row.due_at, new Date())).length;
   const overdue = relevantAssignments.filter((row) => row.status !== "done" && row.due_at && new Date(row.due_at).getTime() < now).length;
-  const dueSoon = relevantAssignments.filter((row) => {
-    if (row.status === "done" || !row.due_at) return false;
-    const dueAt = new Date(row.due_at).getTime();
-    if (dueAt < now) return false;
-    const hoursUntil = (dueAt - now) / (1000 * 60 * 60);
-    return hoursUntil <= 48 && hoursUntil > 0 && !isSameDay(row.due_at, new Date());
-  }).length;
-  const needsRedo = relevantAssignments.filter((row) => ["redo", "low_grade"].includes(row.status)).length;
   const studyHours = getStudyHours(studyBlocks);
-  const graduation = getDatxGraduationProgress();
-  const completionRatio = totalThisWeek ? (doneThisWeek / totalThisWeek) * 100 : 0;
 
   const thisWeekAssignments = [...relevantAssignments]
     .filter((row) => row.due_at)
@@ -79,8 +69,6 @@ export default async function DashboardPage() {
   const statCards = [
     { label: "Overdue", value: overdue, tone: "bg-[#2b0f15] border-[#c7434d] text-[#f0a2a7]" },
     { label: "Due today", value: dueToday, tone: "bg-[#2f1c12] border-[#d97136] text-[#f0b87c]" },
-    { label: "Soon", value: dueSoon, tone: "bg-[#1f2142] border-[#4d6fe9] text-[#9bb3ff]" },
-    { label: "Needs redo", value: needsRedo, tone: "bg-[#2a1a34] border-[#8a5ae6] text-[#d2b3ff]" },
     { label: "Study hours", value: formatHours(studyHours), tone: "bg-[#112d2a] border-[#25a66e] text-[#a5f0ce]" },
   ];
 
@@ -90,7 +78,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Today</h1>
           <p className="mt-2 text-sm text-zinc-400">
-            Your week at a glance — open Courses for each class, GPA, and redos.
+            A simple weekly view of due work and study time.
           </p>
         </div>
 
@@ -103,7 +91,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <section className="grid gap-4 md:grid-cols-5">
+      <section className="grid gap-4 md:grid-cols-3">
         {statCards.map((card) => (
           <div key={card.label} className={`rounded-2xl border p-4 shadow-sm ${card.tone}`}>
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-200/85">
@@ -122,16 +110,11 @@ export default async function DashboardPage() {
           </span>
         </div>
 
-        <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-zinc-800">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-zinc-500 via-zinc-300 to-white"
-            style={{ width: `${Math.min(100, completionRatio)}%` }}
-          />
+        <div className="mt-5 text-sm text-zinc-400">
+          {totalThisWeek === 0
+            ? "No work scheduled yet. Add an assignment and it will show up here."
+            : `${totalThisWeek - doneThisWeek} remaining this week.`}
         </div>
-
-        <p className="mt-5 text-sm text-zinc-400">
-          Class breakdown and redos live in Courses. Ctrl+Z to undo.
-        </p>
       </section>
 
       <section className="mt-2 rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
@@ -146,7 +129,7 @@ export default async function DashboardPage() {
             {thisWeekAssignments.map((row) => {
               const dueAt = new Date(row.due_at);
               const isPast = dueAt.getTime() < now && row.status !== "done";
-              const label = isPast ? "Overdue" : dueAt.getTime() <= now + 1000 * 60 * 60 * 48 ? "Due soon" : null;
+              const label = isPast ? "Overdue" : null;
 
               return (
                 <li
@@ -162,7 +145,7 @@ export default async function DashboardPage() {
 
                   <div className="flex items-center gap-2">
                     {label ? (
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${isPast ? "bg-red-500/15 text-red-300" : "bg-amber-500/15 text-amber-300"}`}>
+                      <span className="rounded-full bg-red-500/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-300">
                         {label}
                       </span>
                     ) : null}
@@ -176,24 +159,6 @@ export default async function DashboardPage() {
             })}
           </ul>
         )}
-      </section>
-
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-950/80 p-5">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xl font-semibold">Graduation progress</h3>
-          <span className="text-sm text-zinc-400">{Math.round(graduation.percent)}%</span>
-        </div>
-
-        <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-zinc-800">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400"
-            style={{ width: `${Math.min(100, graduation.percent)}%` }}
-          />
-        </div>
-
-        <div className="mt-3 text-sm text-zinc-400">
-          {graduation.totalCompleted} of {graduation.totalRequired} credits completed
-        </div>
       </section>
 
       {loadError ? (

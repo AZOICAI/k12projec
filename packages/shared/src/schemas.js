@@ -45,5 +45,7 @@ export const studyBlockCreateSchema = z.object({
   ends_at: z.string().datetime({ offset: true }),
   course_id: z.string().uuid().nullable().optional(),
   assignment_id: z.string().uuid().nullable().optional(),
+  is_complete: z.boolean().optional(),
+  completed_at: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export const studyBlockUpdateSchema = studyBlockCreateSchema.partial();

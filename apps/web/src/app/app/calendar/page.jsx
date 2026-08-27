@@ -25,7 +25,11 @@ export default function CalendarPage() {
   const [assignments, setAssignments] = useState([]);
   const [studyBlocks, setStudyBlocks] = useState([]);
   const [courses, setCourses] = useState([]);
-  const [title, setTitle] = useState("");
+  const [assignmentTitle, setAssignmentTitle] = useState("");
+  const [assignmentCourseId, setAssignmentCourseId] = useState("");
+  const [assignmentDueLocal, setAssignmentDueLocal] = useState("");
+  const [assignmentNotes, setAssignmentNotes] = useState("");
+  const [studyTitle, setStudyTitle] = useState("");
   const [startsLocal, setStartsLocal] = useState("");
   const [endsLocal, setEndsLocal] = useState("");
   const [courseId, setCourseId] = useState("");
@@ -85,25 +89,28 @@ export default function CalendarPage() {
     setAssignments(await aRes.json());
     setStudyBlocks(await sRes.json());
     setCourses(await cRes.json());
-  }, [weekStart, weekEnd]);
+    if (!assignmentCourseId && courses.length) {
+      setAssignmentCourseId(courses[0].id);
+    }
+  }, [assignmentCourseId, courses.length, weekStart, weekEnd]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function addStudyBlock(e) {
+  async function addAssignment(e) {
     e.preventDefault();
-    if (!title || !startsLocal || !endsLocal) return;
+    if (!assignmentTitle || !assignmentDueLocal) return;
 
-    const res = await fetch(apiPaths.studyBlocks, {
+    const res = await fetch(apiPaths.assignments, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        title,
-        starts_at: new Date(startsLocal).toISOString(),
-        ends_at: new Date(endsLocal).toISOString(),
-        course_id: courseId || null,
+        course_id: assignmentCourseId || courses[0]?.id || null,
+        title: assignmentTitle,
+        due_at: new Date(assignmentDueLocal).toISOString(),
+        notes: assignmentNotes || null,
       }),
     });
 
@@ -112,10 +119,28 @@ export default function CalendarPage() {
       return;
     }
 
-    setTitle("");
-    setStartsLocal("");
-    setEndsLocal("");
-    setCourseId("");
+    setAssignmentTitle("");
+    setAssignmentCourseId(courses[0]?.id || "");
+    setAssignmentDueLocal("");
+    setAssignmentNotes("");
+    await load();
+  }
+
+  async function removeAssignment(id) {
+    const res = await fetch(apiPaths.assignment(id), { method: "DELETE", credentials: "include" });
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
+    await load();
+  }
+
+  async function removeStudyBlock(id) {
+    const res = await fetch(apiPaths.studyBlock(id), { method: "DELETE", credentials: "include" });
+    if (!res.ok) {
+      setError(await res.text());
+      return;
+    }
     await load();
   }
 
@@ -125,7 +150,7 @@ export default function CalendarPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Calendar</h1>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Week view of assignments and study blocks. New study entries appear here automatically.
+            Plan the week and add assignments directly to the calendar.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -159,59 +184,6 @@ export default function CalendarPage() {
         </p>
       ) : null}
 
-      <form onSubmit={addStudyBlock} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="grid gap-3 md:grid-cols-5">
-          <label className="flex flex-col gap-1 text-sm md:col-span-2">
-            <span className="font-medium">Study block name</span>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              placeholder="Algebra review"
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Starts</span>
-            <input
-              type="datetime-local"
-              value={startsLocal}
-              onChange={(e) => setStartsLocal(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Ends</span>
-            <input
-              type="datetime-local"
-              value={endsLocal}
-              onChange={(e) => setEndsLocal(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-              required
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">Course</span>
-            <select
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
-            >
-              <option value="">None</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>{course.name}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-3 flex justify-end">
-          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-            Add to calendar
-          </button>
-        </div>
-      </form>
-
       <div className="grid gap-3 md:grid-cols-7">
         {days.map((day, i) => {
           const key = day.toDateString();
@@ -242,6 +214,19 @@ export default function CalendarPage() {
                       <div className="mt-1 text-[10px] text-zinc-500">
                         {timeValue.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
                       </div>
+                      <button
+                        type="button"
+                        className="mt-2 text-[10px] font-medium text-red-600 hover:underline"
+                        onClick={() => {
+                          if (isStudy) {
+                            void removeStudyBlock(entry.id);
+                          } else {
+                            void removeAssignment(entry.id);
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
                     </li>
                   );
                 })}
@@ -250,6 +235,58 @@ export default function CalendarPage() {
           );
         })}
       </div>
+
+      <form onSubmit={addAssignment} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-200">Add assignment</div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <label className="flex flex-col gap-1 text-sm md:col-span-2">
+            <span className="font-medium">Assignment</span>
+            <input
+              value={assignmentTitle}
+              onChange={(e) => setAssignmentTitle(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              placeholder="Essay draft"
+              required
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Course</span>
+            <select
+              value={assignmentCourseId}
+              onChange={(e) => setAssignmentCourseId(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            >
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>{course.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">Due</span>
+            <input
+              type="datetime-local"
+              value={assignmentDueLocal}
+              onChange={(e) => setAssignmentDueLocal(e.target.value)}
+              className="rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+              required
+            />
+          </label>
+        </div>
+        <label className="mt-3 flex flex-col gap-1 text-sm">
+          <span className="font-medium">Notes</span>
+          <textarea
+            value={assignmentNotes}
+            onChange={(e) => setAssignmentNotes(e.target.value)}
+            className="min-h-[72px] rounded-lg border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-900"
+            placeholder="Optional details"
+          />
+        </label>
+        <div className="mt-3 flex justify-end">
+          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+            Add assignment
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

@@ -144,6 +144,8 @@ create table public.study_blocks (
   title text not null,
   starts_at timestamptz not null,
   ends_at timestamptz not null,
+  is_complete boolean not null default false,
+  completed_at timestamptz,
   created_at timestamptz not null default now(),
   constraint study_blocks_time_order check (ends_at > starts_at)
 );
