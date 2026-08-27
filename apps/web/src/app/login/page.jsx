@@ -38,6 +38,13 @@ export default function LoginPage() {
       return;
     }
 
+    if (typeof account.canvasAccessKey === "undefined") {
+      account.canvasAccessKey = "";
+      account.canvasSchoolUrl = account.canvasSchoolUrl ?? "";
+      accounts[trimmedUsername] = account;
+      localStorage.setItem("k12-local-accounts", JSON.stringify(accounts));
+    }
+
     setLocalDevSession(trimmedUsername, rememberMe);
     setLoading(false);
     router.push("/app");

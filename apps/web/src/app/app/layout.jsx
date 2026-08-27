@@ -36,11 +36,17 @@ export default async function AppLayout({ children }) {
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app">
                 Home
               </Link>
-              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/calendar">
-                Calendar
+              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/school">
+                School
+              </Link>
+              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/planner">
+                Planner
               </Link>
               <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/study">
                 Study
+              </Link>
+              <Link className="hover:text-zinc-900 dark:hover:text-zinc-100" href="/app/settings">
+                Settings
               </Link>
             </nav>
           </div>

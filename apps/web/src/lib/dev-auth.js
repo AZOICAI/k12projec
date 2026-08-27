@@ -21,6 +21,29 @@ export function writeLocalAccounts(accounts) {
   window.localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
 }
 
+export function getLocalAccount(username) {
+  return readLocalAccounts()[username] ?? null;
+}
+
+export function upsertLocalAccount(username, updates = {}) {
+  const trimmedUsername = String(username ?? "").trim();
+  if (!trimmedUsername) return null;
+
+  const accounts = readLocalAccounts();
+  const previous = accounts[trimmedUsername] ?? {};
+  const nextAccount = {
+    ...previous,
+    username: trimmedUsername,
+    ...updates,
+    canvasAccessKey: updates.canvasAccessKey ?? previous.canvasAccessKey ?? "",
+    canvasSchoolUrl: updates.canvasSchoolUrl ?? previous.canvasSchoolUrl ?? "",
+  };
+
+  accounts[trimmedUsername] = nextAccount;
+  writeLocalAccounts(accounts);
+  return nextAccount;
+}
+
 export function setLocalDevSession(username, rememberMe = true) {
   if (typeof document === "undefined") return;
 

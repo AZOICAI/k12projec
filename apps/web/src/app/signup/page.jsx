@@ -6,7 +6,7 @@ import { useState } from "react";
 import {
   readLocalAccounts,
   setLocalDevSession,
-  writeLocalAccounts,
+  upsertLocalAccount,
 } from "@/lib/dev-auth";
 
 export default function SignupPage() {
@@ -49,8 +49,12 @@ export default function SignupPage() {
       return;
     }
 
-    accounts[trimmedUsername] = { username: trimmedUsername, password };
-    writeLocalAccounts(accounts);
+    upsertLocalAccount(trimmedUsername, {
+      username: trimmedUsername,
+      password,
+      canvasAccessKey: "",
+      canvasSchoolUrl: "",
+    });
     setLocalDevSession(trimmedUsername, rememberMe);
     setLoading(false);
     router.push("/app");
